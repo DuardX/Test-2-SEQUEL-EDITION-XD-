@@ -5,37 +5,87 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Markdown Assembler</title>
 <meta name="description" content="MarkDownload → .md → Assemble → ready TXT. Local-only Markdown assembler.">
-<meta name="theme-color" content="#f4f3ee">
-<meta name="theme-color" content="#141412" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='%23191813' stroke-width='3'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='%232b43e6'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#121110">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='%23efe9e0' stroke-width='3'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='%23c1442c'/%3E%3C/svg%3E">
+<script>/* apply saved theme before paint (localStorage -> cookie fallback) */
+(function(){
+  var KEY='mda.theme.v1',t=null;
+  try{t=localStorage.getItem(KEY);}catch(e){}
+  if(!t){
+    var m=document.cookie.match(new RegExp('(?:^|;\\s*)'+KEY.replace(/\./g,'\\.')+'=([^;]*)'));
+    if(m)t=decodeURIComponent(m[1]);
+  }
+  if(t){document.documentElement.dataset.theme=t;}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+
+/* ============ THEMES ============ */
+/* 01 · EMBER — default, warm charcoal + rust */
 :root{
-  color-scheme:light dark;
-  --bg:#f4f3ee; --panel:#fcfbf8; --ink:#191813; --muted:#746f62;
-  --line:#dedbd0; --line2:#c6c2b3;
-  --accent:#2b43e6; --accent-soft:rgba(43,67,230,.08);
-  --ok:#1d7a4c; --warn:#a86414;
+  color-scheme:dark;
+  --bg:#121110; --panel:#191613; --ink:#efe9e0; --muted:#948c80; --faint:#635c53;
+  --line:#2c2925; --line2:#423d37;
+  --accent:#c1442c; --accent-hover:#d5573c; --accent-soft:rgba(193,68,44,.13);
+  --ok:#97a878; --warn:#cf9a4e; --on-accent:#fbf6ef;
   --disp:"Space Grotesk",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --r:9px;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#141412; --panel:#1c1b18; --ink:#e8e6dc; --muted:#8f8a7a;
-  --line:#2c2b25; --line2:#3f3d33;
-  --accent:#8b9bff; --accent-soft:rgba(139,155,255,.12);
-  --ok:#54c189; --warn:#d79f52;
-}}
+/* 02 · PAPER — warm parchment + ink blue */
+[data-theme="paper"]{
+  color-scheme:light;
+  --bg:#eee3cb; --panel:#f6eeda; --ink:#2b2214; --muted:#7c6f57; --faint:#a5967a;
+  --line:#d9c9a8; --line2:#c2b088;
+  --accent:#2b43e6; --accent-hover:#2034b8; --accent-soft:rgba(43,67,230,.1);
+  --ok:#4c7a2e; --warn:#a3650f; --on-accent:#f6f6ff;
+}
+/* 03 · MOSS — deep green + sage */
+[data-theme="moss"]{
+  color-scheme:dark;
+  --bg:#101512; --panel:#161c17; --ink:#e4ead9; --muted:#8f9a87; --faint:#5f6a5b;
+  --line:#242c24; --line2:#3a4436;
+  --accent:#97a878; --accent-hover:#aab98d; --accent-soft:rgba(151,168,120,.14);
+  --ok:#7fb592; --warn:#c9a05a; --on-accent:#151a10;
+}
+/* 04 · LIGHT — crisp neutral white + teal */
+[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f4f6f8; --panel:#ffffff; --ink:#16181d; --muted:#5c626c; --faint:#959aa4;
+  --line:#e0e3e8; --line2:#c9cdd5;
+  --accent:#0e7490; --accent-hover:#0a5c73; --accent-soft:rgba(14,116,144,.1);
+  --ok:#178a46; --warn:#b45309; --on-accent:#f0fbfd;
+}
+/* 05 · NIGHT — navy + periwinkle */
+[data-theme="night"]{
+  color-scheme:dark;
+  --bg:#0e1218; --panel:#141a23; --ink:#e2e8f0; --muted:#8a94a6; --faint:#5a6475;
+  --line:#232b38; --line2:#374254;
+  --accent:#7aa2ff; --accent-hover:#97b6ff; --accent-soft:rgba(122,162,255,.12);
+  --ok:#62c08c; --warn:#d0a35c; --on-accent:#0e1320;
+}
+/* 06 · DUSK — plum + dusty rose */
+[data-theme="dusk"]{
+  color-scheme:dark;
+  --bg:#161119; --panel:#1e1721; --ink:#ece4ec; --muted:#9d8ea0; --faint:#6c5e70;
+  --line:#2d2432; --line2:#46384b;
+  --accent:#cf85a3; --accent-hover:#dd9eb7; --accent-soft:rgba(207,133,163,.13);
+  --ok:#8fb58a; --warn:#cfa063; --on-accent:#20111a;
+}
+
+/* ============ BASE ============ */
 html{-webkit-text-size-adjust:100%}
-body{font:400 14px/1.5 var(--disp);background:var(--bg);color:var(--ink);min-height:100vh}
+body{font:400 14px/1.5 var(--disp);background:var(--bg);color:var(--ink);min-height:100vh;
+  transition:background-color .25s ease,color .25s ease;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
   background-image:radial-gradient(var(--line) 1px,transparent 1.4px);
-  background-size:23px 23px;opacity:.55}
+  background-size:23px 23px;opacity:.45}
 body::after{content:"";position:fixed;top:0;left:0;right:0;height:2px;background:var(--accent);z-index:10}
-::selection{background:var(--accent);color:#fff}
+::selection{background:var(--accent);color:var(--on-accent)}
 header,main,footer{position:relative;z-index:1;max-width:1160px;margin:0 auto;padding-left:22px;padding-right:22px}
 
 /* ---------- header ---------- */
@@ -46,15 +96,26 @@ header{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap
 h1{font-size:clamp(20px,2.6vw,25px);font-weight:700;letter-spacing:-.02em;line-height:1.05}
 .tagline{font:400 11.5px/1.6 var(--mono);color:var(--muted);margin-top:5px;letter-spacing:.02em}
 .tagline b{color:var(--accent);font-weight:600}
-.head-right{display:flex;align-items:center;gap:10px}
+.head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .pill{display:inline-flex;align-items:center;gap:8px;font:500 10.5px/1 var(--mono);letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted);border:1px solid var(--line);background:var(--panel);
   padding:8px 12px;border-radius:99px}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--line2);flex:none;transition:background .25s,box-shadow .25s}
 .dot.on{background:var(--accent);animation:pulse 2.2s ease-in-out infinite}
-.dot.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(29,122,76,.15)}
-.dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(168,100,20,.15)}
+.dot.ok{background:var(--ok);box-shadow:0 0 0 3px var(--accent-soft)}
+.dot.warn{background:var(--warn);box-shadow:0 0 0 3px var(--accent-soft)}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--accent-soft)}50%{box-shadow:0 0 0 6px var(--accent-soft)}}
+
+/* ---------- theme switcher ---------- */
+.themes{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+  background:var(--panel);padding:8px 11px;border-radius:99px}
+.swatch{width:18px;height:18px;border-radius:50%;padding:0;cursor:pointer;position:relative;flex:none;
+  background:linear-gradient(135deg,var(--sw-bg) 48%,var(--sw-acc) 52%);
+  border:1px solid var(--sw-bd);
+  transition:transform .15s ease,box-shadow .15s ease}
+.swatch:hover{transform:scale(1.18)}
+.swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.swatch[aria-checked="true"]{box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--ink)}
 
 /* ---------- layout ---------- */
 main{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:22px;
@@ -63,12 +124,13 @@ main{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:22p
 @media(max-width:920px){main{grid-template-columns:1fr}#step-out{grid-column:auto;grid-row:auto;position:static}}
 
 .step{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
-  padding:20px 20px 22px;animation:rise .55s cubic-bezier(.2,.7,.2,1) both}
+  padding:20px 20px 22px;animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
+  transition:background-color .25s ease,border-color .25s ease}
 #step-src{animation-delay:.05s}#step-tpl{animation-delay:.14s}#step-out{animation-delay:.23s}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 .step-head{display:flex;align-items:baseline;gap:10px;margin-bottom:15px}
 .num{font:600 11.5px var(--mono);color:var(--accent);letter-spacing:.14em}
-.step-head h2{font-size:12.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+.step-head h2{font:600 12.5px var(--mono);letter-spacing:.15em;text-transform:uppercase}
 .step-status{margin-left:auto;display:inline-flex;align-items:center;gap:7px;
   font:400 11px var(--mono);color:var(--muted);white-space:nowrap}
 .step-status .dot{width:6px;height:6px}
@@ -77,7 +139,7 @@ main{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:22p
 .drop{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line2);border-radius:8px;
   padding:17px 18px;cursor:pointer;background:transparent;
   transition:border-color .2s,background .2s,transform .2s}
-.drop:hover{border-color:var(--ink)}
+.drop:hover{border-color:var(--muted)}
 .drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .drop.over{border-color:var(--accent);background:var(--accent-soft);transform:scale(1.008)}
 .drop-ic{color:var(--muted);flex:none;transition:transform .2s,color .2s}
@@ -87,7 +149,7 @@ main{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:22p
 
 /* ---------- controls ---------- */
 .row{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:7px;font:600 11px/1 var(--disp);letter-spacing:.08em;
+.btn{display:inline-flex;align-items:center;gap:7px;font:600 11px/1 var(--mono);letter-spacing:.06em;
   text-transform:uppercase;padding:10px 14px;border-radius:7px;border:1px solid var(--line2);
   background:transparent;color:var(--ink);cursor:pointer;
   transition:background .18s,color .18s,border-color .18s,transform .12s}
@@ -96,8 +158,8 @@ main{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:22p
 .btn:active{transform:translateY(1px)}
 .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn.sm{padding:8px 11px;font-size:10.5px}
-.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg);padding:11px 18px}
-.btn.primary:hover{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);padding:11px 18px}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);color:var(--on-accent)}
 .btn.primary svg{transition:transform .18s}
 .btn.primary:hover svg{transform:translateX(2px)}
 .btn.done{border-color:var(--ok);color:var(--ok)}
@@ -105,11 +167,12 @@ main{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:22p
 /* ---------- editors ---------- */
 textarea{width:100%;margin-top:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;
   color:var(--ink);font:400 12.5px/1.65 var(--mono);padding:13px 14px;min-height:170px;resize:vertical;
-  transition:border-color .18s,box-shadow .18s}
+  transition:border-color .18s,box-shadow .18s,background-color .25s ease}
 textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 textarea::placeholder{color:var(--muted);opacity:.7}
-textarea::-webkit-scrollbar{width:10px}
-textarea::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+textarea::-webkit-scrollbar{width:8px}
+textarea::-webkit-scrollbar-track{background:transparent}
+textarea::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
 #outText{min-height:300px}
 #outText.flash{animation:flash .9s ease}
 @keyframes flash{0%{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}}
@@ -123,15 +186,15 @@ textarea::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;bord
 /* ---------- footer / toast ---------- */
 footer{border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:22px;
   justify-content:space-between;padding-top:20px;padding-bottom:36px}
-footer h3{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:7px}
+footer h3{font:600 11px var(--mono);letter-spacing:.15em;text-transform:uppercase;margin-bottom:7px;color:var(--muted)}
 footer p{font:400 11.5px/1.75 var(--mono);color:var(--muted);max-width:580px}
-.foot-right{font:400 10.5px var(--mono);color:var(--muted);letter-spacing:.08em;align-self:flex-end}
+.foot-right{font:400 10.5px var(--mono);color:var(--faint);letter-spacing:.08em;align-self:flex-end}
 #toast{position:fixed;left:50%;bottom:26px;z-index:50;transform:translate(-50%,14px);
   background:var(--ink);color:var(--bg);font:500 11.5px var(--mono);letter-spacing:.02em;
   padding:10px 16px;border-radius:8px;opacity:0;pointer-events:none;
   transition:opacity .25s,transform .25s}
 #toast.show{opacity:1;transform:translate(-50%,0)}
-#toast.warn{background:var(--warn);color:#fff}
+#toast.warn{background:var(--warn);color:var(--bg)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -149,6 +212,14 @@ footer p{font:400 11.5px/1.75 var(--mono);color:var(--muted);max-width:580px}
     </div>
   </div>
   <div class="head-right">
+    <div class="themes" role="radiogroup" aria-label="Color theme">
+      <button class="swatch" role="radio" data-set-theme="ember" style="--sw-bg:#121110;--sw-acc:#c1442c;--sw-bd:#423d37" title="Ember · dark"  aria-label="Ember, dark theme"></button>
+      <button class="swatch" role="radio" data-set-theme="paper" style="--sw-bg:#eee3cb;--sw-acc:#2b43e6;--sw-bd:#c2b088" title="Paper · parchment" aria-label="Paper, parchment theme"></button>
+      <button class="swatch" role="radio" data-set-theme="moss"  style="--sw-bg:#101512;--sw-acc:#97a878;--sw-bd:#3a4436" title="Moss · dark"   aria-label="Moss, dark theme"></button>
+      <button class="swatch" role="radio" data-set-theme="light" style="--sw-bg:#f4f6f8;--sw-acc:#0e7490;--sw-bd:#c9cdd5" title="Light · cool"  aria-label="Light, cool theme"></button>
+      <button class="swatch" role="radio" data-set-theme="night" style="--sw-bg:#0e1218;--sw-acc:#7aa2ff;--sw-bd:#374254" title="Night · dark"  aria-label="Night, dark theme"></button>
+      <button class="swatch" role="radio" data-set-theme="dusk"  style="--sw-bg:#161119;--sw-acc:#cf85a3;--sw-bd:#46384b" title="Dusk · dark"   aria-label="Dusk, dark theme"></button>
+    </div>
     <span class="pill"><i class="dot" id="globalDot"></i><span id="globalState">Idle</span></span>
     <button class="btn sm" id="installBtn" hidden>Install app</button>
   </div>
@@ -223,6 +294,40 @@ const srcDot=$('srcDot'),srcStatus=$('srcStatus'),tplDot=$('tplDot'),tplStatus=$
 const copyBtn=$('copyBtn'),dlBtn=$('dlBtn'),toastEl=$('toast');
 let fileName='',toastTimer;
 
+/* ----- theme storage: localStorage primary, cookie fallback ----- */
+const THEME_KEY='mda.theme.v1';
+function saveTheme(id){
+  try{localStorage.setItem(THEME_KEY,id);}catch(e){}
+  try{document.cookie=THEME_KEY+'='+encodeURIComponent(id)+';max-age=31536000;path=/;SameSite=Lax';}catch(e){}
+}
+function loadTheme(){
+  let t=null;
+  try{t=localStorage.getItem(THEME_KEY);}catch(e){}
+  if(!t){
+    const m=document.cookie.match(new RegExp('(?:^|;\\s*)'+THEME_KEY.replace(/\./g,'\\.')+'=([^;]*)'));
+    if(m)t=decodeURIComponent(m[1]);
+    if(t){try{localStorage.setItem(THEME_KEY,t);}catch(e){}} /* re-seed storage if it recovered */
+  }
+  return t;
+}
+
+/* ----- themes ----- */
+const themeBtns=[...document.querySelectorAll('[data-set-theme]')];
+function applyTheme(id,persist){
+  document.documentElement.dataset.theme=id;
+  themeBtns.forEach(b=>b.setAttribute('aria-checked',b.dataset.setTheme===id?'true':'false'));
+  if(persist)saveTheme(id);
+  requestAnimationFrame(()=>{
+    const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    const m=document.querySelector('meta[name="theme-color"]:not([media])');
+    if(m&&bg)m.content=bg;
+  });
+}
+themeBtns.forEach(b=>b.addEventListener('click',()=>applyTheme(b.dataset.setTheme,true)));
+const savedTheme=loadTheme();
+applyTheme(savedTheme&&themeBtns.some(b=>b.dataset.setTheme===savedTheme)?savedTheme:'ember',false);
+
+/* ----- helpers ----- */
 const fmtBytes=b=>b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(2)+' MB';
 const stats=t=>({bytes:new Blob([t]).size,lines:t?t.split('\n').length:0});
 function toast(msg,tone){toastEl.textContent=msg;toastEl.className='show'+(tone?' '+tone:'');
@@ -314,6 +419,17 @@ dlBtn.addEventListener('click',()=>{
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),4000);toast('Downloading '+base+'.txt');});
 
+/* ----- launched by OS with files (desktop / ChromeOS file_handlers) ----- */
+try{
+  if('launchQueue' in window && 'LaunchParams' in window && 'files' in LaunchParams.prototype){
+    launchQueue.setConsumer(async params=>{
+      if(!params.files||!params.files.length)return;
+      try{const file=await params.files[0].getFile();loadText(file.name,await file.text());}
+      catch{toast('Could not open that file','warn');}
+    });
+  }
+}catch{}
+
 /* ----- incoming shares (GET params or SW POST cache) ----- */
 (function incoming(){
   try{const q=new URLSearchParams(location.search),t=q.get('text');
@@ -326,16 +442,20 @@ dlBtn.addEventListener('click',()=>{
 
 /* ----- PWA: inline manifest, install prompt, optional SW ----- */
 (function pwa(){
-  const icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="104" fill="#17160f"/><rect x="86" y="86" width="234" height="234" rx="50" fill="none" stroke="#f4f3ee" stroke-width="36"/><rect x="196" y="196" width="230" height="230" rx="50" fill="#2b43e6"/></svg>');
+  const icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="104" fill="#121110"/><rect x="86" y="86" width="234" height="234" rx="50" fill="none" stroke="#efe9e0" stroke-width="36"/><rect x="196" y="196" width="230" height="230" rx="50" fill="#c1442c"/></svg>');
   const manifest={name:'Markdown Assembler',short_name:'MD Assembler',
     description:'MarkDownload → .md → Assemble → ready TXT',
     start_url:'.',scope:'.',display:'standalone',
-    background_color:'#f4f3ee',theme_color:'#191813',
+    background_color:'#121110',theme_color:'#121110',
     icons:[{src:icon,sizes:'512x512',type:'image/svg+xml',purpose:'any'},
            {src:icon,sizes:'192x192',type:'image/svg+xml',purpose:'maskable'}],
+    file_handlers:[{action:'.',accept:{
+      'text/markdown':['.md','.markdown'],'text/plain':['.txt']}}],
+    launch_handler:{client_mode:'focus-existing'},
     share_target:{action:'.',method:'POST',enctype:'multipart/form-data',
       params:[{name:'text'},{name:'title'},
-        {files:[{name:'md',accepts:['text/markdown','text/plain','.md']}]}]}};
+        {files:[{name:'md',accepts:['text/markdown','text/plain','application/markdown',
+          'application/octet-stream','.md','.markdown','.txt']}]}]}};
   const l=document.createElement('link');l.rel='manifest';
   l.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/json'}));
   document.head.appendChild(l);
