@@ -461,7 +461,7 @@
     <rect x="9" y="9" width="11" height="12" rx="2"/>
     <path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/>
   </symbol>
-  <symbol id="i-share" viewBox="0 0 24 24">
+  <symbol id="i-send" viewBox="0 0 24 24">
     <path d="M12 14.5V4m0 0L8.2 7.8M12 4l3.8 3.8"/>
     <path d="M4.8 13.5v5A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-5"/>
   </symbol>
@@ -573,7 +573,7 @@
     </div>
     <div class="row" style="margin-top:0">
       <button class="btn" id="copyBtn"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
-      <button class="btn" id="shareBtn" data-tooltip="Send the result to another app"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span>Share</span></button>
+      <button class="btn" id="sendBtn" data-tooltip="Send the result to another app"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Share</span></button>
       <button class="btn primary" id="dlBtn"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download</span></button>
       <label class="toggle" title="Copy the result automatically after each assembly">
         <input type="checkbox" id="autoCopy">
@@ -621,7 +621,7 @@ const fileInput=$('fileInput'),drop=$('drop'),srcText=$('srcText'),tplText=$('tp
 const srcDot=$('srcDot'),srcStatus=$('srcStatus'),tplDot=$('tplDot'),tplStatus=$('tplStatus'),
       outDot=$('outDot'),outStatus=$('outStatus'),outCountEl=$('outCount'),outFileEl=$('outFile'),
       globalDot=$('globalDot'),globalState=$('globalState');
-const copyBtn=$('copyBtn'),dlBtn=$('dlBtn'),shareBtn=$('shareBtn'),toastEl=$('toast');
+const copyBtn=$('copyBtn'),dlBtn=$('dlBtn'),sendBtn=$('sendBtn'),toastEl=$('toast');
 const actionbar=$('actionbar'),barCopy=$('barCopy'),barLabel=$('barLabel'),autoCopyEl=$('autoCopy');
 const chipsEl=$('chips'),tplFileInput=$('tplFileInput');
 const delDialog=$('delDialog'),delNameEl=$('delName');
@@ -953,7 +953,7 @@ copyBtn.addEventListener('click',async()=>{
   await copyOutput();
   copyBtn.classList.add('done');copyBtn.querySelector('span').textContent='Copied';
   setTimeout(()=>{copyBtn.classList.remove('done');copyBtn.querySelector('span').textContent='Copy';},1500);});
-shareBtn.addEventListener('click',async()=>{
+sendBtn.addEventListener('click',async()=>{
   if(!outText.value){toast('Nothing to share yet','warn');return;}
   
   // Check if share is actually supported
