@@ -72,11 +72,12 @@
     --ok:#8fb58a; --warn:#cfa063; --on-accent:#20111a;
   }
 }
-[data-theme="nebula"] {
+[data-theme="noir"] {
   color-scheme:dark;
-  --bg:#0a0c14; --panel:#121620; --ink:#e8edf5; --muted:#8892b0; --faint:#5a6485;
-  --line:#1e2638; --line2:#4f5b8a; --accent:#6b7bb8;
-  --ok:#8bb8a0; --warn:#c9975a; --on-accent:#ffffff;
+  --bg:#0a0a0a; --panel:#171717; --ink:#e5e5e5; --muted:#888888; --faint:#5a5a5a;
+  --line:#2a2a2a; --line2:#3d3d3d; --accent:#e5e5e5;
+  --accent-hover:#888888;
+  --ok:#e5e5e5; --warn:#888888; --on-accent:#0a0a0a;
 }
 @layer base {
   html { -webkit-text-size-adjust:100%; }
@@ -517,9 +518,9 @@
           <span class="swatch" style="--sw-bg:#161119;--sw-acc:#cf85a3;--sw-bd:#46384b"></span>
           <span class="to-name">Dusk</span>
         </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="nebula" data-theme-name="Nebula">
-  <span class="swatch" style="--sw-bg:#0a0c14;--sw-acc:#6b7bb8;--sw-bd:#4f5b8a"></span>
-  <span class="to-name">Nebula</span>
+        <button class="theme-option" role="radio" type="button" data-set-theme="noir" data-theme-name="Noir">
+  <span class="swatch" style="--sw-bg:#0a0a0a;--sw-acc:#e5e5e5;--sw-bd:#3d3d3d"></span>
+  <span class="to-name">Noir</span>
 </button>
       </div>
     </div>
@@ -952,11 +953,38 @@ copyBtn.addEventListener('click',async()=>{
   await copyOutput();
   copyBtn.classList.add('done');copyBtn.querySelector('span').textContent='Copied';
   setTimeout(()=>{copyBtn.classList.remove('done');copyBtn.querySelector('span').textContent='Copy';},1500);});
-if(!('share' in navigator)){shareBtn.hidden=true;}
 shareBtn.addEventListener('click',async()=>{
   if(!outText.value){toast('Nothing to share yet','warn');return;}
-  try{await navigator.share({text:outText.value});buzz(12);}
-  catch(e){if(e&&e.name!=='AbortError')toast('Share failed','warn');}});
+  
+  // Check if share is actually supported
+  if(typeof navigator.share !== 'function'){
+    toast('Share not supported in this browser','warn');
+    return;
+  }
+  
+  // Firefox on Android requires secure context
+  if(!window.isSecureContext){
+    toast('Share requires HTTPS — use Copy instead','warn');
+    return;
+  }
+  
+  try{
+    // Try canShare first if available (more reliable)
+    if(navigator.canShare && !navigator.canShare({text:outText.value})){
+      toast('Cannot share this content','warn');
+      return;
+    }
+    
+    await navigator.share({text:outText.value});
+    buzz(12);
+  }catch(e){
+    if(e&&e.name==='AbortError')return; // User cancelled, not an error
+    // Fallback: copy to clipboard if share fails
+    toast('Share failed — copied to clipboard instead','warn');
+    await copyOutput();
+    barFlash();
+  }
+});
 dlBtn.addEventListener('click',()=>{
   if(!outText.value){toast('Nothing to download yet','warn');return;}
   const base=(fileName||'assembled').replace(/\.[^.]*$/,'')||'assembled';
