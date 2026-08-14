@@ -447,16 +447,13 @@
       ? crypto.randomUUID().slice(0, 8)
       : Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
 
-  // Проверка наличия токена в теле шаблона (регистронезависимо, с допустимыми пробелами)
   const hasToken = (body) => TOKEN_RE.test(body || "");
 
-  // Проверка уникальности имени среди всех шаблонов, кроме шаблона с указанным id
   const nameIsFree = (name, exceptId) => {
     const n = name.trim().toLowerCase();
     return !tpls.list.some((t) => t.id !== exceptId && t.name.toLowerCase() === n);
   };
 
-  // Генерация первого свободного имени "Template N"
   const nextFreeName = () => {
     const used = new Set(tpls.list.map((t) => t.name.trim().toLowerCase()));
     let i = tpls.list.length + 1;
@@ -493,7 +490,6 @@
 
   const activeTpl = () => tpls.list.find((t) => t.id === tpls.active) || tpls.list[0];
 
-  // Обновление статуса шаблона с учётом валидации токена
   function tplSettled() {
     const t = activeTpl();
     if (hasToken(t.body)) {
@@ -506,8 +502,7 @@
   }
 
   function tplTyping() {
-    const body = tplText.value;
-    if (hasToken(body)) {
+    if (hasToken(tplText.value)) {
       setDot(tplDot, "on");
       tplStatus.textContent = "Saving…";
     } else {
@@ -523,7 +518,7 @@
       t.body = tplText.value;
       persistTpls();
       if (!silent && !hasToken(t.body)) {
-        toast('Template saved, but ' + TOKEN + ' is missing', "warn");
+        toast("Template saved, but " + TOKEN + " is missing", "warn");
       }
     }
     tplSettled();
@@ -548,10 +543,6 @@
   function switchTpl(id) {
     if (id === tpls.active) return;
     transition(() => {
-      const old = activeTpl();
-      if (old && old.body !== tplText.value && !hasToken(tplText.value)) {
-        toast('Template saved without ' + TOKEN, "warn");
-      }
       commitBody(true);
       tpls.active = id;
       persistTpls();
@@ -598,16 +589,13 @@
       done = true;
       const v = input.value.trim();
       if (!v) {
-        // Пустое имя — откат
         toast("Name cannot be empty", "warn");
         t.name = originalName;
       } else if (v.toLowerCase() === originalName.toLowerCase()) {
-        // Имя не изменилось (регистронезависимо) — ок
+        // unchanged
       } else if (!nameIsFree(v, t.id)) {
-        // Имя уже занято другим шаблоном — откат
         toast('Name "' + v + '" is already used', "warn");
         t.name = originalName;
-        input.classList.add("invalid");
       } else {
         t.name = v;
       }
@@ -683,7 +671,7 @@
     buzz(12);
     if (missing.length) {
       const names = missing.map((t) => '"' + t.name + '"').join(", ");
-      toast("Exported · " + missing.length + " template(s) missing " + TOKEN + ": " + names, "warn");
+      toast("Exported · " + missing.length + " missing " + TOKEN + ": " + names, "warn");
     } else {
       toast("Templates exported");
     }
@@ -699,14 +687,20 @@
     r.onload = () => {
       try {
         const raw = String(r.result);
-        // Normalize keys that may have trailing spaces from broken formatters
-        const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
-        const p = JSON.parse(fixed);
-
+        let p;
+        try {
+          p = JSON.parse(raw);
+        } catch (e) {
+          // Fallback only: repair keys mangled by an external formatter.
+          const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
+          p = JSON.parse(fixed);
+        }
         const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
         if (!items) throw new Error("bad shape");
         let added = 0;
+        let updated = 0;
         let skipped = 0;
+        let activeTouched = false;
         items.forEach((it) => {
           if (!it || typeof it.body !== "string") {
             skipped++;
@@ -714,23 +708,35 @@
           }
           const name =
             typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
-          if (tpls.list.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
-            skipped++;
+          const existing = tpls.list.find((t) => t.name.toLowerCase() === name.toLowerCase());
+          if (existing) {
+            if (existing.body === it.body) {
+              skipped++;
+            } else {
+              existing.body = it.body;
+              updated++;
+              if (existing.id === tpls.active) activeTouched = true;
+            }
             return;
           }
           tpls.list.push({ id: newId(), name, body: it.body });
           added++;
         });
-        if (added) {
+        if (added || updated) {
           persistTpls();
           renderChips();
+          if (activeTouched) {
+            tplText.value = activeTpl().body;
+            scheduleRender();
+          }
           buzz(10);
-          toast(
-            "Imported " + added + " template" + (added > 1 ? "s" : "") +
-            (skipped ? " · " + skipped + " skipped" : "")
-          );
+          const parts = [];
+          if (added) parts.push(added + " added");
+          if (updated) parts.push(updated + " updated");
+          toast("Imported — " + parts.join(", "));
+          tplSettled();
         } else {
-          toast(skipped ? "Nothing new to import" : "No valid templates found", "warn");
+          toast(skipped ? "Already up to date" : "No valid templates found", "warn");
         }
       } catch (e) {
         toast("Import failed — not a valid template file", "warn");
@@ -886,7 +892,17 @@
   let deferredPrompt = null;
   const installBtn = $("installBtn");
 
+  // Detect if already running as an installed PWA
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
+  if (isStandalone) {
+    installBtn.hidden = true;
+  }
+
   window.addEventListener("beforeinstallprompt", (e) => {
+    if (isStandalone) return;
     e.preventDefault();
     deferredPrompt = e;
     installBtn.hidden = false;
@@ -902,6 +918,11 @@
   window.addEventListener("appinstalled", () => {
     installBtn.hidden = true;
     setGlobal("Installed", "ok");
+  });
+
+  // Hide the button if the app gets installed mid-session
+  window.matchMedia("(display-mode: standalone)").addEventListener("change", (e) => {
+    if (e.matches) installBtn.hidden = true;
   });
 
   if ("serviceWorker" in navigator) {
