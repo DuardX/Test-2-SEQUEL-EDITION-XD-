@@ -4,6 +4,7 @@
   const $ = (id) => document.getElementById(id);
 
   const TOKEN = "{{MARKDOWN}}";
+  const TOKEN_RE = /\{\{\s*MARKDOWN\s*\}\}/i;
   const TPL_KEY = "mda.template.v1";
   const TPLS_KEY = "mda.templates.v1";
   const DEFAULT_TPL = TOKEN;
@@ -357,8 +358,6 @@
     fileInput.value = "";
   });
 
-  // drop is a <label for="fileInput">, so click opens the dialog automatically.
-  // Keyboard activation still needs JS:
   drop.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -403,7 +402,6 @@
   window.addEventListener("dragover", (e) => e.preventDefault());
   window.addEventListener("drop", (e) => e.preventDefault());
 
-  // Paste directly into the source textarea
   srcText.addEventListener("paste", (e) => {
     const text = e.clipboardData && e.clipboardData.getData("text");
     if (!text) return;
@@ -449,6 +447,23 @@
       ? crypto.randomUUID().slice(0, 8)
       : Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
 
+  // Проверка наличия токена в теле шаблона (регистронезависимо, с допустимыми пробелами)
+  const hasToken = (body) => TOKEN_RE.test(body || "");
+
+  // Проверка уникальности имени среди всех шаблонов, кроме шаблона с указанным id
+  const nameIsFree = (name, exceptId) => {
+    const n = name.trim().toLowerCase();
+    return !tpls.list.some((t) => t.id !== exceptId && t.name.toLowerCase() === n);
+  };
+
+  // Генерация первого свободного имени "Template N"
+  const nextFreeName = () => {
+    const used = new Set(tpls.list.map((t) => t.name.trim().toLowerCase()));
+    let i = tpls.list.length + 1;
+    while (used.has(("Template " + i).toLowerCase())) i++;
+    return "Template " + i;
+  };
+
   function loadTpls() {
     let raw = null;
     try { raw = localStorage.getItem(TPLS_KEY); } catch (e) {}
@@ -478,22 +493,38 @@
 
   const activeTpl = () => tpls.list.find((t) => t.id === tpls.active) || tpls.list[0];
 
+  // Обновление статуса шаблона с учётом валидации токена
   function tplSettled() {
-    setDot(tplDot, "ok");
-    tplStatus.textContent = activeTpl().name;
+    const t = activeTpl();
+    if (hasToken(t.body)) {
+      setDot(tplDot, "ok");
+      tplStatus.textContent = t.name;
+    } else {
+      setDot(tplDot, "warn");
+      tplStatus.textContent = t.name + " · missing " + TOKEN;
+    }
   }
 
   function tplTyping() {
-    setDot(tplDot, "on");
-    tplStatus.textContent = "Saving…";
+    const body = tplText.value;
+    if (hasToken(body)) {
+      setDot(tplDot, "on");
+      tplStatus.textContent = "Saving…";
+    } else {
+      setDot(tplDot, "warn");
+      tplStatus.textContent = "Missing " + TOKEN;
+    }
   }
 
-  function commitBody() {
+  function commitBody(silent) {
     clearTimeout(saveTimer);
     const t = activeTpl();
     if (t && t.body !== tplText.value) {
       t.body = tplText.value;
       persistTpls();
+      if (!silent && !hasToken(t.body)) {
+        toast('Template saved, but ' + TOKEN + ' is missing', "warn");
+      }
     }
     tplSettled();
   }
@@ -517,7 +548,11 @@
   function switchTpl(id) {
     if (id === tpls.active) return;
     transition(() => {
-      commitBody();
+      const old = activeTpl();
+      if (old && old.body !== tplText.value && !hasToken(tplText.value)) {
+        toast('Template saved without ' + TOKEN, "warn");
+      }
+      commitBody(true);
       tpls.active = id;
       persistTpls();
       tplText.value = activeTpl().body;
@@ -529,8 +564,9 @@
   }
 
   function newTpl() {
-    commitBody();
-    const t = { id: newId(), name: "Template " + (tpls.list.length + 1), body: DEFAULT_TPL };
+    commitBody(true);
+    const name = nextFreeName();
+    const t = { id: newId(), name, body: DEFAULT_TPL };
     tpls.list.push(t);
     tpls.active = t.id;
     persistTpls();
@@ -547,6 +583,7 @@
     if (!t) return;
     const chip = chipsEl.querySelector('[data-id="' + t.id + '"]');
     if (!chip) return;
+    const originalName = t.name;
     const input = document.createElement("input");
     input.className = "chip-edit";
     input.value = t.name;
@@ -560,7 +597,20 @@
       if (done) return;
       done = true;
       const v = input.value.trim();
-      if (v) t.name = v;
+      if (!v) {
+        // Пустое имя — откат
+        toast("Name cannot be empty", "warn");
+        t.name = originalName;
+      } else if (v.toLowerCase() === originalName.toLowerCase()) {
+        // Имя не изменилось (регистронезависимо) — ок
+      } else if (!nameIsFree(v, t.id)) {
+        // Имя уже занято другим шаблоном — откат
+        toast('Name "' + v + '" is already used', "warn");
+        t.name = originalName;
+        input.classList.add("invalid");
+      } else {
+        t.name = v;
+      }
       persistTpls();
       renderChips();
       tplSettled();
@@ -594,7 +644,7 @@
 
   $("confirmDel").addEventListener("click", () => {
     delDialog.close();
-    commitBody();
+    commitBody(true);
     const idx = tpls.list.findIndex((t) => t.id === tpls.active);
     const gone = tpls.list[idx].name;
     tpls.list.splice(idx, 1);
@@ -610,14 +660,15 @@
 
   $("resetTplBtn").addEventListener("click", () => {
     tplText.value = DEFAULT_TPL;
-    commitBody();
+    commitBody(true);
     scheduleRender();
     toast("Body reset to " + TOKEN);
     tplText.focus();
   });
 
   $("exportTplBtn").addEventListener("click", () => {
-    commitBody();
+    commitBody(true);
+    const missing = tpls.list.filter((t) => !hasToken(t.body));
     const data = JSON.stringify(
       {
         app: "md-assembler",
@@ -630,7 +681,12 @@
     );
     downloadBlob(data, "application/json", "md-assembler-templates.json");
     buzz(12);
-    toast("Templates exported");
+    if (missing.length) {
+      const names = missing.map((t) => '"' + t.name + '"').join(", ");
+      toast("Exported · " + missing.length + " template(s) missing " + TOKEN + ": " + names, "warn");
+    } else {
+      toast("Templates exported");
+    }
   });
 
   $("importTplBtn").addEventListener("click", () => tplFileInput.click());
@@ -642,7 +698,11 @@
     const r = new FileReader();
     r.onload = () => {
       try {
-        const p = JSON.parse(String(r.result));
+        const raw = String(r.result);
+        // Normalize keys that may have trailing spaces from broken formatters
+        const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
+        const p = JSON.parse(fixed);
+
         const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
         if (!items) throw new Error("bad shape");
         let added = 0;
@@ -683,13 +743,13 @@
   tplText.addEventListener("input", () => {
     tplTyping();
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(commitBody, 450);
+    saveTimer = setTimeout(() => commitBody(false), 450);
     scheduleRender();
   });
 
-  addEventListener("pagehide", commitBody);
+  addEventListener("pagehide", () => commitBody(true));
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") commitBody();
+    if (document.visibilityState === "hidden") commitBody(true);
   });
 
   tpls = loadTpls();
@@ -782,7 +842,6 @@
     }
   } catch {}
 
-  // Messages from service worker (share while the app is already open)
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data && event.data.type === "md-share") {
@@ -850,7 +909,6 @@
       navigator.serviceWorker.register("sw.js").catch(() => {});
     }, { once: true });
 
-    // Reload when a new service worker takes control
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (refreshing) return;
