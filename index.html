@@ -1,1053 +1,234 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Markdown Assembler</title>
-<meta name="description" content="MarkDownload → .md → Assemble → ready TXT. Local-only Markdown assembler.">
-<meta name="theme-color" content="#121110">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='%23efe9e0' stroke-width='3'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='%23c1442c'/%3E%3C/svg%3E">
-<script>/* apply saved theme before paint */
-(function(){
-  var KEY='mda.theme.v1',t=null;
-  try{t=localStorage.getItem(KEY);}catch(e){}
-  if(!t){
-    var m=document.cookie.match(new RegExp('(?:^|;\\s*)'+KEY.replace(/\./g,'\\.')+'=([^;]*)'));
-    if(m)t=decodeURIComponent(m[1]);
-  }
-  if(t){document.documentElement.dataset.theme=t;}
-})();
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-@layer reset, theme, base, layout, components, overrides;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown Assembler</title>
+  <meta name="description" content="MarkDownload → .md → Assemble → ready TXT. Local-only Markdown assembler.">
+  <meta name="theme-color" content="#121110">
 
-@layer reset {
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-}
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self';">
 
-@layer theme {
-  :root {
-    color-scheme: dark;
-    --bg:#121110; --panel:#191613; --ink:#efe9e0; --muted:#948c80; --faint:#635c53;
-    --line:#2c2925; --line2:#423d37;
-    --accent:#c1442c;
-    --ok:#97a878; --warn:#cf9a4e; --on-accent:#fbf6ef;
-    --disp:"Space Grotesk",system-ui,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-    --r:9px;
-    --accent-hover: color-mix(in srgb, var(--accent) 82%, white);
-    --accent-soft:  color-mix(in srgb, var(--accent) 14%, transparent);
-  }
-  [data-theme="paper"] {
-    color-scheme:light;
-    --bg:#eee3cb; --panel:#f6eeda; --ink:#2b2214; --muted:#7c6f57; --faint:#a5967a;
-    --line:#d9c9a8; --line2:#c2b088; --accent:#2b43e6;
-    --ok:#4c7a2e; --warn:#a3650f; --on-accent:#f6f6ff;
-  }
-  [data-theme="moss"] {
-    color-scheme:dark;
-    --bg:#101512; --panel:#161c17; --ink:#e4ead9; --muted:#8f9a87; --faint:#5f6a5b;
-    --line:#242c24; --line2:#3a4436; --accent:#97a878;
-    --ok:#7fb592; --warn:#c9a05a; --on-accent:#151a10;
-  }
-  [data-theme="light"] {
-    color-scheme:light;
-    --bg:#f4f6f8; --panel:#ffffff; --ink:#16181d; --muted:#5c626c; --faint:#959aa4;
-    --line:#e0e3e8; --line2:#c9cdd5; --accent:#0e7490;
-    --ok:#178a46; --warn:#b45309; --on-accent:#f0fbfd;
-  }
-  [data-theme="night"] {
-    color-scheme:dark;
-    --bg:#0e1218; --panel:#141a23; --ink:#e2e8f0; --muted:#8a94a6; --faint:#5a6475;
-    --line:#232b38; --line2:#374254; --accent:#7aa2ff;
-    --ok:#62c08c; --warn:#d0a35c; --on-accent:#0e1320;
-  }
-  [data-theme="dusk"] {
-    color-scheme:dark;
-    --bg:#161119; --panel:#1e1721; --ink:#ece4ec; --muted:#9d8ea0; --faint:#6c5e70;
-    --line:#2d2432; --line2:#46384b; --accent:#cf85a3;
-    --ok:#8fb58a; --warn:#cfa063; --on-accent:#20111a;
-  }
-}
-[data-theme="noir"] {
-  color-scheme:dark;
-  --bg:#0a0a0a; --panel:#171717; --ink:#e5e5e5; --muted:#888888; --faint:#5a5a5a;
-  --line:#2a2a2a; --line2:#3d3d3d; --accent:#e5e5e5;
-  --accent-hover:#888888;
-  --ok:#e5e5e5; --warn:#888888; --on-accent:#0a0a0a;
-}
-@layer base {
-  html { -webkit-text-size-adjust:100%; }
-  body {
-    font:400 14px/1.5 var(--disp); background:var(--bg); color:var(--ink);
-    min-height:100vh; overflow-x:hidden;
-    transition:background-color .25s ease, color .25s ease;
-    -webkit-tap-highlight-color:transparent;
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='%23efe9e0' stroke-width='3'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='%23c1442c'/%3E%3C/svg%3E">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
 
-    &::before {
-      content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
-      background-image:radial-gradient(var(--line) 1px, transparent 1.4px);
-      background-size:23px 23px; opacity:.45;
-    }
-    &::after {
-      content:""; position:fixed; top:0; left:0; right:0; height:2px;
-      background:var(--accent); z-index:10;
-    }
-  }
-  ::selection { background:var(--accent); color:var(--on-accent); }
-  header, main, footer {
-    position:relative; z-index:1; max-width:1160px; margin:0 auto;
-    padding-left:22px; padding-right:22px;
-  }
-  h1 {
-    font-size:clamp(20px,2.6vw,25px); font-weight:700; letter-spacing:-.02em;
-    line-height:1.05; text-wrap:balance;
-  }
-  .svg-defs { position:absolute; width:0; height:0; overflow:hidden; }
-  @keyframes pulse {
-    0%,100% { box-shadow:0 0 0 3px var(--accent-soft); }
-    50%     { box-shadow:0 0 0 6px var(--accent-soft); }
-  }
-  @keyframes rise  { from { opacity:0; transform:translateY(12px); } }
-  @keyframes flash { 0% { border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); } }
-}
-
-@layer layout {
-  header {
-    display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap;
-    gap:16px; padding-top:32px; padding-bottom:22px; border-bottom:1px solid var(--line);
-  }
-  main {
-    display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);
-    gap:22px; align-items:start; padding-top:26px; padding-bottom:26px;
-  }
-  #step-out { grid-column:2; grid-row:1/span 2; position:sticky; top:22px; }
-}
-
-@layer components {
-  /* icon system: geometry lives in <symbol>, paint comes from here */
-  .icon {
-    width:13px; height:13px; flex:none;
-    fill:none; stroke:currentColor;
-    stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;
-  }
-  .icon--bar  { width:14px; height:14px; }
-  .icon--drop { width:22px; height:22px; stroke-width:1.7; }
-  .icon--chev { width:10px; height:10px; stroke-width:2.5; }
-
-  /* brand */
-  .brand {
-    display:flex; align-items:center; gap:13px; min-width:0;
-    & > svg { flex:none; color:var(--ink); }
-    & > div { min-width:0; }
-  }
-  .tagline {
-    font:400 11.5px/1.6 var(--mono); color:var(--muted); margin-top:5px; letter-spacing:.02em;
-    & b { color:var(--accent); font-weight:600; }
-  }
-  .head-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-
-  /* status pill + dots */
-  .pill {
-    display:inline-flex; align-items:center; gap:8px;
-    font:500 10.5px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase;
-    color:var(--muted); border:1px solid var(--line); background:var(--panel);
-    padding:8px 12px; border-radius:99px;
-  }
-  .dot {
-    width:7px; height:7px; border-radius:50%; background:var(--line2); flex:none;
-    transition:background .25s, box-shadow .25s;
-    &.on   { background:var(--accent); animation:pulse 2.2s ease-in-out infinite; }
-    &.ok   { background:var(--ok);   box-shadow:0 0 0 3px var(--accent-soft); }
-    &.warn { background:var(--warn); box-shadow:0 0 0 3px var(--accent-soft); }
-  }
-
-  /* theme swatch + trigger + dropdown menu */
-  .swatch {
-    width:18px; height:18px; border-radius:50%; flex:none; display:inline-block;
-    background:linear-gradient(135deg, var(--sw-bg) 48%, var(--sw-acc) 52%);
-    border:1px solid var(--sw-bd, var(--line2));
-  }
-  .theme-dd { position:relative; }
-  .theme-trigger {
-    & .swatch { width:14px; height:14px; }
-  }
-  .theme-menu {
-    display:none;
-    position:absolute;
-    top:calc(100% + 8px);
-    right:0;
-    left:0;
-    z-index:60;
-    padding:6px;
-    min-width:176px;
-    max-height:360px;
-    overflow-y:auto;
-    background:var(--panel); color:var(--ink);
-    border:1px solid var(--line2); border-radius:var(--r);
-    box-shadow:0 12px 32px rgba(0,0,0,.28);
-    flex-direction:column; gap:2px;
-  }
-  .theme-menu.open { display:flex; }
-  .theme-menu-title {
-    font:600 10.5px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase;
-    color:var(--faint); padding:6px 10px 8px;
-  }
-  .theme-option {
-    display:flex; align-items:center; gap:10px; width:100%;
-    padding:9px 10px; border:1px solid transparent; border-radius:6px;
-    background:transparent; color:var(--ink);
-    font:500 12.5px/1 var(--mono); letter-spacing:.02em; text-transform:none;
-    cursor:pointer;
-    transition:background-color .15s ease, border-color .15s ease;
-    &:hover { background:var(--accent-soft); }
-    &[aria-checked="true"] { background:var(--accent-soft); border-color:var(--accent); }
-    & .to-name { flex:1; text-align:left; }
-  }
-
-  /* steps */
-  .step {
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
-    padding:20px 20px 22px; min-width:0;
-    animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
-    transition:background-color .25s ease, border-color .25s ease;
-  }
-  #step-src { animation-delay:.05s; }
-  #step-tpl { animation-delay:.14s; }
-  #step-out { animation-delay:.23s; }
-  .step-head {
-    display:flex; align-items:baseline; gap:10px; margin-bottom:15px; min-width:0;
-    & .num { font:600 11.5px var(--mono); color:var(--accent); letter-spacing:.14em; flex:none; }
-    & h2   { font:600 12.5px var(--mono); letter-spacing:.15em; text-transform:uppercase; flex:none; }
-  }
-  .step-status {
-    margin-left:auto; display:inline-flex; align-items:center; gap:7px;
-    font:400 11px var(--mono); color:var(--muted); white-space:nowrap; min-width:0;
-    & .dot { width:6px; height:6px; }
-    & > span:last-child { overflow:hidden; text-overflow:ellipsis; }
-  }
-
-  /* template chips */
-  .chips-row { display:flex; gap:8px; align-items:center; margin:-2px 0 13px; min-width:0; }
-  .chips {
-    display:flex; gap:8px; align-items:center; overflow-x:auto; min-width:0; flex:1;
-    padding-bottom:4px; scrollbar-width:thin;
-    &::-webkit-scrollbar { height:5px; }
-    &::-webkit-scrollbar-thumb { background:var(--line2); border-radius:3px; }
-  }
-  .chip {
-    flex:none; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    font:600 11px/1 var(--mono); letter-spacing:.04em; padding:8px 13px; border-radius:99px;
-    border:1px solid var(--line2); background:transparent; color:var(--muted); cursor:pointer;
-    transition:border-color .15s, color .15s, background-color .15s;
-    &:hover { border-color:var(--muted); color:var(--ink); }
-    &:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-    &.on  { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
-    &.add {
-      width:29px; height:29px; padding:0; display:flex; align-items:center; justify-content:center;
-      font-size:15px; line-height:1; border-style:dashed; color:var(--faint);
-      &:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
-    }
-  }
-  .chip-edit {
-    flex:none; width:min(150px,58vw); font:600 11px/1 var(--mono); letter-spacing:.04em;
-    padding:8px 13px; border-radius:99px; border:1px solid var(--accent);
-    background:var(--bg); color:var(--ink); outline:none;
-  }
-
-  /* dropzone */
-  .drop {
-    display:flex; align-items:center; gap:14px; border:1.5px dashed var(--line2); border-radius:8px;
-    padding:17px 18px; cursor:pointer; background:transparent; min-width:0;
-    transition:border-color .2s, background .2s, transform .2s;
-    &:hover { border-color:var(--muted); }
-    &:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-    &.over { border-color:var(--accent); background:var(--accent-soft); transform:scale(1.008); }
-    & b { display:block; font-size:13.5px; font-weight:600; }
-    & span { display:block; font:400 11px var(--mono); color:var(--muted); margin-top:3px; }
-  }
-  .drop-ic {
-    color:var(--muted); transition:transform .2s, color .2s;
-    .drop:hover &, .drop.over & { color:var(--accent); transform:translateY(-2px); }
-  }
-
-  /* rows + buttons */
-  .row { display:flex; flex-wrap:wrap; gap:9px; margin-top:12px; align-items:center; min-width:0; }
-  .btn {
-    display:inline-flex; align-items:center; gap:7px;
-    font:600 11px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
-    padding:10px 14px; border-radius:7px; border:1px solid var(--line2);
-    background:transparent; color:var(--ink); cursor:pointer;
-    transition:background .18s, color .18s, border-color .18s, transform .12s;
-    &:hover { border-color:var(--ink); background:var(--ink); color:var(--bg); }
-    &:active { transform:translateY(1px); }
-    &:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-    &.sm { padding:8px 11px; font-size:10.5px; }
-    &.primary {
-      background:var(--accent); border-color:var(--accent); color:var(--on-accent); padding:11px 18px;
-      &:hover { background:var(--accent-hover); border-color:var(--accent-hover); color:var(--on-accent); }
-    }
-    &.done { border-color:var(--ok); color:var(--ok); }
-    &.danger { border-color:var(--warn); color:var(--warn); }
-  }
-
-  /* toggle */
-  .toggle {
-    display:inline-flex; align-items:center; gap:8px; margin-left:auto; padding:6px 2px;
-    cursor:pointer; user-select:none; -webkit-user-select:none;
-    & input { position:absolute; opacity:0; width:0; height:0; }
-    & .track {
-      width:32px; height:18px; border-radius:99px; background:var(--line2); position:relative; flex:none;
-      transition:background .2s ease;
-      &::after {
-        content:""; position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
-        background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.3); transition:transform .2s ease;
+  <script>
+    /* apply saved theme before paint */
+    (function () {
+      var KEY = 'mda.theme.v1', t = null;
+      try { t = localStorage.getItem(KEY); } catch (e) {}
+      if (!t) {
+        var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + KEY.replace(/\./g, '\\.') + '=([^;]*)'));
+        if (m) t = decodeURIComponent(m[1]);
       }
-    }
-    & input:checked + .track { background:var(--accent);
-      &::after { transform:translateX(14px); }
-    }
-    & input:focus-visible + .track { outline:2px solid var(--accent); outline-offset:2px; }
-    & .lbl {
-      font:600 10.5px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
-      color:var(--muted); transition:color .18s;
-    }
-    & input:checked ~ .lbl { color:var(--ink); }
-  }
-
-  /* textareas */
-  textarea {
-    width:100%; margin-top:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;
-    color:var(--ink); font:400 12.5px/1.65 var(--mono); padding:13px 14px; min-height:170px; resize:vertical;
-    transition:border-color .18s, box-shadow .18s, background-color .25s ease;
-    &:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
-    &::placeholder { color:var(--muted); opacity:.7; }
-    &::-webkit-scrollbar { width:8px; }
-    &::-webkit-scrollbar-track { background:transparent; }
-    &::-webkit-scrollbar-thumb { background:var(--line2); border-radius:4px; }
-  }
-  #outText { min-height:300px;
-    &.flash { animation:flash .9s ease; }
-  }
-
-  .hint {
-    font:400 11.5px/1.7 var(--mono); color:var(--muted);
-    & code {
-      font:600 11px var(--mono); color:var(--accent); background:var(--accent-soft);
-      padding:2.5px 7px; border-radius:5px;
-    }
-  }
-  .meta {
-    display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    font:400 10.5px var(--mono); color:var(--muted); margin-top:9px; letter-spacing:.03em;
-  }
-
-  /* footer */
-  footer {
-    border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:22px;
-    justify-content:space-between; padding-top:20px; padding-bottom:36px;
-    & h3 { font:600 11px var(--mono); letter-spacing:.15em; text-transform:uppercase; margin-bottom:7px; color:var(--muted); }
-    & p  { font:400 11.5px/1.75 var(--mono); color:var(--muted); max-width:580px; text-wrap:pretty; }
-  }
-  .foot-right { font:400 10.5px var(--mono); color:var(--faint); letter-spacing:.08em; align-self:flex-end; }
-
-  /* action bar */
-  .actionbar {
-    position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex; justify-content:center;
-    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-    background:var(--panel); border-top:1px solid var(--line); box-shadow:0 -10px 30px rgba(0,0,0,.16);
-    transform:translateY(110%);
-    transition:transform .3s cubic-bezier(.2,.7,.2,1), background-color .25s ease;
-    &.show { transform:translateY(0); }
-  }
-  .bar-btn {
-    display:flex; align-items:center; justify-content:center; gap:10px; width:100%; max-width:560px;
-    font:600 12px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
-    background:var(--accent); color:var(--on-accent); border:none; border-radius:9px;
-    padding:15px 18px; cursor:pointer;
-    transition:background .18s ease, transform .12s ease;
-    &:active { transform:scale(.985); }
-    &:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
-    &.done { background:var(--ok); }
-  }
-
-  /* toast */
-  #toast {
-    position:fixed; left:50%; bottom:26px; z-index:50; transform:translate(-50%,14px);
-    background:var(--ink); color:var(--bg); font:500 11.5px var(--mono); letter-spacing:.02em;
-    padding:10px 16px; border-radius:8px; opacity:0; pointer-events:none;
-    transition:opacity .25s, transform .25s;
-    &.show { opacity:1; transform:translate(-50%,0); }
-    &.warn { background:var(--warn); color:var(--bg); }
-  }
-
-  /* native dialog (delete confirm) */
-  dialog {
-    background:var(--panel); color:var(--ink); border:1px solid var(--line2);
-    border-radius:var(--r); padding:22px; max-width:340px; width:calc(100% - 44px);
-    font-family:var(--disp);
-    &::backdrop { background:rgba(0,0,0,.55); }
-    & p { margin:0 0 18px; font-size:14px; line-height:1.5;
-      & span { color:var(--accent); font-weight:600; }
-    }
-    & .dialog-actions { display:flex; gap:8px; justify-content:flex-end;
-      & .danger { background:var(--warn); border-color:var(--warn); color:var(--bg);
-        &:hover { background:color-mix(in srgb, var(--warn) 82%, white); border-color:color-mix(in srgb, var(--warn) 82%, white); color:var(--bg); }
-      }
-    }
-  }
-}
-
-@layer overrides {
-  header { z-index:30; }
-
-  body:has(.actionbar.show) footer { padding-bottom:120px; }
-  body:has(.actionbar.show) #toast { bottom:calc(88px + env(safe-area-inset-bottom)); }
-
-  ::view-transition-group(root) { animation-duration:.2s; }
-
-  @media (max-width:920px) {
-    main { grid-template-columns:minmax(0,1fr); }
-    #step-out { grid-column:auto; grid-row:auto; position:static; }
-  }
-  @media (prefers-reduced-motion:reduce) {
-    *, *::before, *::after { animation:none !important; transition:none !important; }
-    ::view-transition-group(root) { animation:none !important; }
-  }
-}
-</style>
+      if (t) { document.documentElement.dataset.theme = t; }
+    })();
+  </script>
 </head>
 <body>
 
-<!-- ============ SVG ICON SPRITE ============ -->
-<svg class="svg-defs" aria-hidden="true">
-  <symbol id="i-paste" viewBox="0 0 24 24">
-    <rect x="5.5" y="4.5" width="13" height="17" rx="2.2"/>
-    <path d="M9.5 4.5V3.5h5v1M9.5 10.5h5M9.5 14h5M9.5 17.5h3"/>
-  </symbol>
-  <symbol id="i-clear" viewBox="0 0 24 24">
-    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
-  </symbol>
-  <symbol id="i-drop" viewBox="0 0 24 24">
-    <path d="M12 4v9m0 0 3.5-3.5M12 13 8.5 9.5"/>
-    <path d="M4.5 15.5v3A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-3"/>
-  </symbol>
-  <symbol id="i-rename" viewBox="0 0 24 24">
-    <path d="M4 20l1-4L16.5 4.5a2.12 2.12 0 0 1 3 3L8 19l-4 1z"/>
-    <path d="M14.5 6.5l3 3"/>
-  </symbol>
-  <symbol id="i-delete" viewBox="0 0 24 24">
-    <path d="M5 7h14"/>
-    <path d="M9.5 7V4.5h5V7"/>
-    <path d="M7 7l1 13h8l1-13"/>
-    <path d="M10.5 11v5M13.5 11v5"/>
-  </symbol>
-  <symbol id="i-reset" viewBox="0 0 24 24">
-    <path d="M4 10a8 8 0 1 1 2.3 6.9"/>
-    <path d="M4 5v5h5"/>
-  </symbol>
-  <symbol id="i-export" viewBox="0 0 24 24">
-    <path d="M12 4v9.5m0 0 3.5-3.5M12 13.5 8.5 10"/>
-    <path d="M4.8 16.5v2A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-2"/>
-  </symbol>
-  <symbol id="i-import" viewBox="0 0 24 24">
-    <path d="M12 14V4.5m0 0L8.5 8M12 4.5 15.5 8"/>
-    <path d="M4.8 16.5v2A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-2"/>
-  </symbol>
-  <symbol id="i-copy" viewBox="0 0 24 24">
-    <rect x="9" y="9" width="11" height="12" rx="2"/>
-    <path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/>
-  </symbol>
-  <symbol id="i-send" viewBox="0 0 24 24">
-    <path d="M12 14.5V4m0 0L8.2 7.8M12 4l3.8 3.8"/>
-    <path d="M4.8 13.5v5A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-5"/>
-  </symbol>
-  <symbol id="i-download" viewBox="0 0 24 24">
-    <path d="M12 4v10.5m0 0 3.8-3.8M12 14.5 8.2 10.7"/>
-    <path d="M4.8 17.2v1.3A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-1.3"/>
-  </symbol>
-  <symbol id="i-chev" viewBox="0 0 24 24">
-    <path d="m6 9 6 6 6-6"/>
-  </symbol>
-</svg>
+  <svg class="svg-defs" aria-hidden="true">
+    <symbol id="i-paste" viewBox="0 0 24 24">
+      <rect x="5.5" y="4.5" width="13" height="17" rx="2.2"/>
+      <path d="M9.5 4.5V3.5h5v1M9.5 10.5h5M9.5 14h5M9.5 17.5h3"/>
+    </symbol>
+    <symbol id="i-clear" viewBox="0 0 24 24">
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
+    </symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24">
+      <path d="M12 4v9m0 0 3.5-3.5M12 13 8.5 9.5"/>
+      <path d="M4.5 15.5v3A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-3"/>
+    </symbol>
+    <symbol id="i-rename" viewBox="0 0 24 24">
+      <path d="M4 20l1-4L16.5 4.5a2.12 2.12 0 0 1 3 3L8 19l-4 1z"/>
+      <path d="M14.5 6.5l3 3"/>
+    </symbol>
+    <symbol id="i-delete" viewBox="0 0 24 24">
+      <path d="M5 7h14"/>
+      <path d="M9.5 7V4.5h5V7"/>
+      <path d="M7 7l1 13h8l1-13"/>
+      <path d="M10.5 11v5M13.5 11v5"/>
+    </symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24">
+      <path d="M4 10a8 8 0 1 1 2.3 6.9"/>
+      <path d="M4 5v5h5"/>
+    </symbol>
+    <symbol id="i-export" viewBox="0 0 24 24">
+      <path d="M12 4v9.5m0 0 3.5-3.5M12 13.5 8.5 10"/>
+      <path d="M4.8 16.5v2A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-2"/>
+    </symbol>
+    <symbol id="i-import" viewBox="0 0 24 24">
+      <path d="M12 14V4.5m0 0L8.5 8M12 4.5 15.5 8"/>
+      <path d="M4.8 16.5v2A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-2"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24">
+      <rect x="9" y="9" width="11" height="12" rx="2"/>
+      <path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/>
+    </symbol>
+    <symbol id="i-send" viewBox="0 0 24 24">
+      <path d="M12 14.5V4m0 0L8.2 7.8M12 4l3.8 3.8"/>
+      <path d="M4.8 13.5v5A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-5"/>
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24">
+      <path d="M12 4v10.5m0 0 3.8-3.8M12 14.5 8.2 10.7"/>
+      <path d="M4.8 17.2v1.3A1.5 1.5 0 0 0 6.3 20h11.4a1.5 1.5 0 0 0 1.5-1.5v-1.3"/>
+    </symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24">
+      <path d="m6 9 6 6 6-6"/>
+    </symbol>
+  </svg>
 
-<header>
-  <div class="brand">
-    <svg width="30" height="30" viewBox="0 0 28 28" aria-hidden="true">
-      <rect x="2.5" y="2.5" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/>
-      <rect x="10" y="10" width="15.5" height="15.5" rx="4" fill="var(--accent)"/>
-    </svg>
-    <div>
-      <h1>Markdown Assembler</h1>
-      <p class="tagline">MarkDownload <b>&rarr;</b> .md <b>&rarr;</b> Assemble <b>&rarr;</b> ready TXT</p>
-    </div>
-  </div>
-  <div class="head-right">
-    <div class="theme-dd" id="themeDD">
-      <button class="btn sm theme-trigger" id="themeTrigger" type="button" aria-haspopup="true" aria-expanded="false">
-        <span class="swatch" id="triggerSwatch" style="--sw-bg:#121110;--sw-acc:#c1442c"></span>
-        <span id="triggerLabel">Ember</span>
-        <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev"/></svg>
-      </button>
-      <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="Color theme">
-        <div class="theme-menu-title">Theme</div>
-        <button class="theme-option" role="radio" type="button" data-set-theme="ember" data-theme-name="Ember">
-          <span class="swatch" style="--sw-bg:#121110;--sw-acc:#c1442c;--sw-bd:#423d37"></span>
-          <span class="to-name">Ember</span>
-        </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="paper" data-theme-name="Paper">
-          <span class="swatch" style="--sw-bg:#eee3cb;--sw-acc:#2b43e6;--sw-bd:#c2b088"></span>
-          <span class="to-name">Paper</span>
-        </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="moss" data-theme-name="Moss">
-          <span class="swatch" style="--sw-bg:#101512;--sw-acc:#97a878;--sw-bd:#3a4436"></span>
-          <span class="to-name">Moss</span>
-        </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="light" data-theme-name="Light">
-          <span class="swatch" style="--sw-bg:#f4f6f8;--sw-acc:#0e7490;--sw-bd:#c9cdd5"></span>
-          <span class="to-name">Light</span>
-        </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="night" data-theme-name="Night">
-          <span class="swatch" style="--sw-bg:#0e1218;--sw-acc:#7aa2ff;--sw-bd:#374254"></span>
-          <span class="to-name">Night</span>
-        </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="dusk" data-theme-name="Dusk">
-          <span class="swatch" style="--sw-bg:#161119;--sw-acc:#cf85a3;--sw-bd:#46384b"></span>
-          <span class="to-name">Dusk</span>
-        </button>
-        <button class="theme-option" role="radio" type="button" data-set-theme="noir" data-theme-name="Noir">
-  <span class="swatch" style="--sw-bg:#0a0a0a;--sw-acc:#e5e5e5;--sw-bd:#3d3d3d"></span>
-  <span class="to-name">Noir</span>
-</button>
+  <header>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 28 28" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/>
+        <rect x="10" y="10" width="15.5" height="15.5" rx="4" fill="var(--accent)"/>
+      </svg>
+      <div>
+        <h1>Markdown Assembler</h1>
+        <p class="tagline">MarkDownload <b>&rarr;</b> .md <b>&rarr;</b> Assemble <b>&rarr;</b> ready TXT</p>
       </div>
     </div>
-    <span class="pill"><i class="dot" id="globalDot"></i><span id="globalState">Idle</span></span>
-    <button class="btn sm" id="installBtn" hidden>Install app</button>
-  </div>
-</header>
 
-<main>
-  <section class="step" id="step-src" aria-labelledby="h-src">
-    <div class="step-head">
-      <span class="num">01</span><h2 id="h-src">Source</h2>
-      <span class="step-status"><i class="dot" id="srcDot"></i><span id="srcStatus">No source loaded.</span></span>
+    <div class="head-right">
+      <div class="theme-dd" id="themeDD">
+        <button class="btn sm theme-trigger" id="themeTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="swatch" id="triggerSwatch" style="--sw-bg:#121110;--sw-acc:#c1442c"></span>
+          <span id="triggerLabel">Ember</span>
+          <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev"/></svg>
+        </button>
+        <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="Color theme">
+          <div class="theme-menu-title">Theme</div>
+          <button class="theme-option" role="radio" type="button" data-set-theme="ember" data-theme-name="Ember">
+            <span class="swatch" style="--sw-bg:#121110;--sw-acc:#c1442c;--sw-bd:#423d37"></span>
+            <span class="to-name">Ember</span>
+          </button>
+          <button class="theme-option" role="radio" type="button" data-set-theme="paper" data-theme-name="Paper">
+            <span class="swatch" style="--sw-bg:#eee3cb;--sw-acc:#2b43e6;--sw-bd:#c2b088"></span>
+            <span class="to-name">Paper</span>
+          </button>
+          <button class="theme-option" role="radio" type="button" data-set-theme="moss" data-theme-name="Moss">
+            <span class="swatch" style="--sw-bg:#101512;--sw-acc:#97a878;--sw-bd:#3a4436"></span>
+            <span class="to-name">Moss</span>
+          </button>
+          <button class="theme-option" role="radio" type="button" data-set-theme="light" data-theme-name="Light">
+            <span class="swatch" style="--sw-bg:#f4f6f8;--sw-acc:#0e7490;--sw-bd:#c9cdd5"></span>
+            <span class="to-name">Light</span>
+          </button>
+          <button class="theme-option" role="radio" type="button" data-set-theme="night" data-theme-name="Night">
+            <span class="swatch" style="--sw-bg:#0e1218;--sw-acc:#7aa2ff;--sw-bd:#374254"></span>
+            <span class="to-name">Night</span>
+          </button>
+          <button class="theme-option" role="radio" type="button" data-set-theme="dusk" data-theme-name="Dusk">
+            <span class="swatch" style="--sw-bg:#161119;--sw-acc:#cf85a3;--sw-bd:#46384b"></span>
+            <span class="to-name">Dusk</span>
+          </button>
+          <button class="theme-option" role="radio" type="button" data-set-theme="noir" data-theme-name="Noir">
+            <span class="swatch" style="--sw-bg:#0a0a0a;--sw-acc:#e5e5e5;--sw-bd:#3d3d3d"></span>
+            <span class="to-name">Noir</span>
+          </button>
+        </div>
+      </div>
+      <span class="pill"><i class="dot" id="globalDot"></i><span id="globalState">Idle</span></span>
+      <button class="btn sm" id="installBtn" hidden>Install app</button>
     </div>
-    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose a Markdown file or drop one here">
-      <svg class="icon icon--drop drop-ic" aria-hidden="true"><use href="#i-drop"/></svg>
-      <div><b>Choose a Markdown file</b><span>or drop it here &middot; .md / .markdown / .txt</span></div>
-    </div>
-    <div class="row">
-      <button class="btn sm" id="pasteBtn"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg><span>Paste Markdown</span></button>
-      <button class="btn sm" id="clearBtn"><svg class="icon" aria-hidden="true"><use href="#i-clear"/></svg><span>Clear</span></button>
-    </div>
-    <textarea id="srcText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Markdown source" placeholder="Loaded Markdown appears here — edit it and the output updates live."></textarea>
-  </section>
+  </header>
 
-  <section class="step" id="step-tpl" aria-labelledby="h-tpl">
-    <div class="step-head">
-      <span class="num">02</span><h2 id="h-tpl">Template</h2>
-      <span class="step-status"><i class="dot" id="tplDot"></i><span id="tplStatus">Default</span></span>
-    </div>
-    <div class="chips-row">
-      <div class="chips" id="chips" role="tablist" aria-label="Templates"></div>
-      <button class="chip add" id="newTplBtn" type="button" title="Create a template" aria-label="Create a template">+</button>
-    </div>
-    <p class="hint">Put <code>{{MARKDOWN}}</code> wherever the downloaded Markdown belongs. Templates save automatically.</p>
-    <textarea id="tplText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Template"></textarea>
-    <div class="row">
-      <button class="btn sm" id="renameTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-rename"/></svg><span>Rename</span></button>
-      <button class="btn sm" id="delTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-delete"/></svg><span>Delete</span></button>
-      <button class="btn sm" id="resetTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>Reset</span></button>
-      <button class="btn sm" id="exportTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg><span>Export</span></button>
-      <button class="btn sm" id="importTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-import"/></svg><span>Import</span></button>
-    </div>
-  </section>
+  <main>
+    <section class="step" id="step-src" aria-labelledby="h-src">
+      <div class="step-head">
+        <span class="num">01</span><h2 id="h-src">Source</h2>
+        <span class="step-status"><i class="dot" id="srcDot"></i><span id="srcStatus">No source loaded.</span></span>
+      </div>
 
-  <section class="step" id="step-out" aria-labelledby="h-out">
-    <div class="step-head">
-      <span class="num">03</span><h2 id="h-out">Output</h2>
-      <span class="step-status"><i class="dot" id="outDot"></i><span id="outStatus">Waiting for source</span></span>
-    </div>
-    <div class="row" style="margin-top:0">
-      <button class="btn" id="copyBtn"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
-      <button class="btn" id="sendBtn" data-tooltip="Send the result to another app"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Share</span></button>
-      <button class="btn primary" id="dlBtn"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download</span></button>
-      <label class="toggle" title="Copy the result automatically after each assembly">
-        <input type="checkbox" id="autoCopy">
-        <span class="track" aria-hidden="true"></span>
-        <span class="lbl">Auto-copy</span>
+      <label class="drop" id="drop" for="fileInput" tabindex="0" role="button" aria-label="Choose a Markdown file or drop one here">
+        <svg class="icon icon--drop drop-ic" aria-hidden="true"><use href="#i-drop"/></svg>
+        <div><b>Choose a Markdown file</b><span>or drop it here &middot; .md / .markdown / .txt</span></div>
       </label>
+
+      <div class="row">
+        <button class="btn sm" id="pasteBtn"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg><span>Paste Markdown</span></button>
+        <button class="btn sm" id="clearBtn"><svg class="icon" aria-hidden="true"><use href="#i-clear"/></svg><span>Clear</span></button>
+      </div>
+
+      <textarea id="srcText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Markdown source" placeholder="Loaded Markdown appears here — edit it and the output updates live."></textarea>
+    </section>
+
+    <section class="step" id="step-tpl" aria-labelledby="h-tpl">
+      <div class="step-head">
+        <span class="num">02</span><h2 id="h-tpl">Template</h2>
+        <span class="step-status"><i class="dot" id="tplDot"></i><span id="tplStatus">Default</span></span>
+      </div>
+
+      <div class="chips-row">
+        <div class="chips" id="chips" role="tablist" aria-label="Templates"></div>
+        <button class="chip add" id="newTplBtn" type="button" title="Create a template" aria-label="Create a template">+</button>
+      </div>
+
+      <p class="hint">Put <code>{{MARKDOWN}}</code> wherever the downloaded Markdown belongs. Templates save automatically.</p>
+      <textarea id="tplText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Template"></textarea>
+
+      <div class="row">
+        <button class="btn sm" id="renameTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-rename"/></svg><span>Rename</span></button>
+        <button class="btn sm" id="delTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-delete"/></svg><span>Delete</span></button>
+        <button class="btn sm" id="resetTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>Reset</span></button>
+        <button class="btn sm" id="exportTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg><span>Export</span></button>
+        <button class="btn sm" id="importTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-import"/></svg><span>Import</span></button>
+      </div>
+    </section>
+
+    <section class="step" id="step-out" aria-labelledby="h-out">
+      <div class="step-head">
+        <span class="num">03</span><h2 id="h-out">Output</h2>
+        <span class="step-status"><i class="dot" id="outDot"></i><span id="outStatus">Waiting for source</span></span>
+      </div>
+
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="copyBtn"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
+        <button class="btn" id="sendBtn"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Share</span></button>
+        <button class="btn primary" id="dlBtn"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download</span></button>
+        <label class="toggle" title="Copy the result automatically after each assembly">
+          <input type="checkbox" id="autoCopy">
+          <span class="track" aria-hidden="true"></span>
+          <span class="lbl">Auto-copy</span>
+        </label>
+      </div>
+
+      <textarea id="outText" readonly spellcheck="false" aria-label="Assembled output" aria-live="polite" placeholder="Assembled result appears here automatically once a source is provided."></textarea>
+      <div class="meta"><span id="outCount">0 chars &middot; 0 lines</span><span id="outFile">&mdash;</span></div>
+    </section>
+  </main>
+
+  <footer>
+    <div>
+      <h3>Android / Cloudflare</h3>
+      <p>The assembler never fetches the original website. MarkDownload handles the website and Cloudflare; this app only receives the resulting Markdown file. When installed as a supported PWA, Android's Share Sheet can send the Markdown directly here.</p>
     </div>
-    <textarea id="outText" readonly spellcheck="false" aria-label="Assembled output" aria-live="polite" placeholder="Assembled result appears here automatically once a source is provided."></textarea>
-    <div class="meta"><span id="outCount">0 chars &middot; 0 lines</span><span id="outFile">&mdash;</span></div>
-  </section>
-</main>
+    <span class="foot-right">local-only &middot; no uploads</span>
+  </footer>
 
-<footer>
-  <div>
-    <h3>Android / Cloudflare</h3>
-    <p>The assembler never fetches the original website. MarkDownload handles the website and Cloudflare; this app only receives the resulting Markdown file. When installed as a supported PWA, Android's Share Sheet can send the Markdown directly here.</p>
+  <div class="actionbar" id="actionbar" aria-hidden="true">
+    <button class="bar-btn" id="barCopy" type="button">
+      <svg class="icon icon--bar" aria-hidden="true"><use href="#i-copy"/></svg>
+      <span id="barLabel">Copy result</span>
+    </button>
   </div>
-  <span class="foot-right">local-only &middot; no uploads</span>
-</footer>
 
-<div class="actionbar" id="actionbar" aria-hidden="true">
-  <button class="bar-btn" id="barCopy" type="button">
-    <svg class="icon icon--bar" aria-hidden="true"><use href="#i-copy"/></svg>
-    <span id="barLabel">Copy result</span>
-  </button>
-</div>
+  <dialog id="delDialog">
+    <p>Delete template "<span id="delName"></span>"?</p>
+    <div class="dialog-actions">
+      <button class="btn sm" id="cancelDel">Cancel</button>
+      <button class="btn sm danger" id="confirmDel">Delete</button>
+    </div>
+  </dialog>
 
-<dialog id="delDialog">
-  <p>Delete template "<span id="delName"></span>"?</p>
-  <div class="dialog-actions">
-    <button class="btn sm" id="cancelDel">Cancel</button>
-    <button class="btn sm danger" id="confirmDel">Delete</button>
-  </div>
-</dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
 
-<div id="toast" role="status" aria-live="polite"></div>
-<input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
-<input type="file" id="tplFileInput" accept=".json,application/json" hidden>
+  <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
+  <input type="file" id="tplFileInput" accept=".json,application/json" hidden>
 
-<script>
-(()=>{ "use strict";
-const $=id=>document.getElementById(id);
-const TOKEN='{{MARKDOWN}}', TPL_KEY='mda.template.v1', TPLS_KEY='mda.templates.v1', DEFAULT_TPL=TOKEN;
-const fileInput=$('fileInput'),drop=$('drop'),srcText=$('srcText'),tplText=$('tplText'),outText=$('outText');
-const srcDot=$('srcDot'),srcStatus=$('srcStatus'),tplDot=$('tplDot'),tplStatus=$('tplStatus'),
-      outDot=$('outDot'),outStatus=$('outStatus'),outCountEl=$('outCount'),outFileEl=$('outFile'),
-      globalDot=$('globalDot'),globalState=$('globalState');
-const copyBtn=$('copyBtn'),dlBtn=$('dlBtn'),sendBtn=$('sendBtn'),toastEl=$('toast');
-const actionbar=$('actionbar'),barCopy=$('barCopy'),barLabel=$('barLabel'),autoCopyEl=$('autoCopy');
-const chipsEl=$('chips'),tplFileInput=$('tplFileInput');
-const delDialog=$('delDialog'),delNameEl=$('delName');
-const themeDD=$('themeDD'),themeTrigger=$('themeTrigger'),themeMenu=$('themeMenu');
-const triggerSwatch=$('triggerSwatch'),triggerLabel=$('triggerLabel');
-let fileName='',toastTimer;
-
-const transition=fn=>{ document.startViewTransition ? document.startViewTransition(fn) : fn(); };
-
-const THEME_KEY='mda.theme.v1';
-function saveTheme(id){
-  try{localStorage.setItem(THEME_KEY,id);}catch(e){}
-  const writeCookie=()=>{
-    try{document.cookie=THEME_KEY+'='+encodeURIComponent(id)+';max-age=31536000;path=/;SameSite=Lax';}catch(e){}
-  };
-  ('requestIdleCallback' in window) ? requestIdleCallback(writeCookie,{timeout:1000}) : writeCookie();
-}
-function loadTheme(){
-  let t=null;
-  try{t=localStorage.getItem(THEME_KEY);}catch(e){}
-  if(!t){
-    const m=document.cookie.match(new RegExp('(?:^|;\\s*)'+THEME_KEY.replace(/\./g,'\\.')+'=([^;]*)'));
-    if(m)t=decodeURIComponent(m[1]);
-    if(t){try{localStorage.setItem(THEME_KEY,t);}catch(e){}}
-  }
-  return t;
-}
-const themeBtns=[...document.querySelectorAll('[data-set-theme]')];
-function setThemeMenu(open){
-  themeMenu.classList.toggle('open',open);
-  themeTrigger.setAttribute('aria-expanded',open?'true':'false');
-}
-themeTrigger.addEventListener('click',()=>{
-  setThemeMenu(!themeMenu.classList.contains('open'));
-});
-document.addEventListener('click',(e)=>{
-  if(themeMenu.classList.contains('open') && !themeDD.contains(e.target)) setThemeMenu(false);
-});
-document.addEventListener('keydown',(e)=>{
-  if(e.key==='Escape' && themeMenu.classList.contains('open')){ setThemeMenu(false); themeTrigger.focus(); }
-});
-function updateTrigger(id){
-  const active=themeBtns.find(b=>b.dataset.setTheme===id);
-  if(!active)return;
-  triggerSwatch.style.setProperty('--sw-bg',active.style.getPropertyValue('--sw-bg'));
-  triggerSwatch.style.setProperty('--sw-acc',active.style.getPropertyValue('--sw-acc'));
-  triggerLabel.textContent=active.dataset.themeName||active.textContent.trim();
-}
-function applyTheme(id,persist){
-  transition(()=>{
-    document.documentElement.dataset.theme=id;
-    themeBtns.forEach(b=>b.setAttribute('aria-checked',b.dataset.setTheme===id?'true':'false'));
-    updateTrigger(id);
-    if(persist)saveTheme(id);
-    requestAnimationFrame(()=>{
-      const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-      const m=document.querySelector('meta[name="theme-color"]:not([media])');
-      if(m&&bg)m.content=bg;
-    });
-  });
-}
-themeBtns.forEach(b=>b.addEventListener('click',()=>{
-  applyTheme(b.dataset.setTheme,true);
-  setThemeMenu(false);
-}));
-const savedTheme=loadTheme();
-applyTheme(savedTheme&&themeBtns.some(b=>b.dataset.setTheme===savedTheme)?savedTheme:'ember',false);
-
-const fmtBytes=b=>b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(2)+' MB';
-const stats=t=>({bytes:new Blob([t]).size,lines:t?t.split('\n').length:0});
-function toast(msg,tone){toastEl.textContent=msg;toastEl.className='show'+(tone?' '+tone:'');
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.className='',2300);}
-const setDot=(d,c)=>d.className='dot'+(c?' '+c:'');
-const setGlobal=(s,c)=>{globalState.textContent=s;setDot(globalDot,c);};
-function downloadBlob(data,mime,filename){
-  const url=URL.createObjectURL(new Blob([data],{type:mime}));
-  const a=document.createElement('a');a.href=url;a.download=filename;
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-}
-
-const buzz=p=>{try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}};
-async function copyOutput(){
-  if(!outText.value)return false;
-  try{await navigator.clipboard.writeText(outText.value);}
-  catch(e){outText.focus();outText.select();
-    try{document.execCommand('copy');}catch(_){}
-    const sel=getSelection();if(sel)sel.removeAllRanges();}
-  buzz(12);
-  return true;
-}
-
-let barBusy=false,autoCopyTimer=null;
-const AC_KEY='mda.autocopy.v1';
-try{autoCopyEl.checked=localStorage.getItem(AC_KEY)==='1';}catch(e){}
-function updateBar(){
-  const has=!!outText.value;
-  actionbar.classList.toggle('show',has);
-  actionbar.setAttribute('aria-hidden',has?'false':'true');
-  if(has&&!barBusy)barLabel.textContent='Copy result';
-}
-function barFlash(){
-  barBusy=true;barCopy.classList.add('done');barLabel.textContent='Copied';
-  setTimeout(()=>{barBusy=false;barCopy.classList.remove('done');updateBar();},1300);
-}
-function scheduleAutoCopy(){
-  clearTimeout(autoCopyTimer);
-  autoCopyTimer=setTimeout(async()=>{
-    if(!outText.value||!autoCopyEl.checked)return;
-    if(await copyOutput())barFlash();
-  },600);
-}
-
-let renderPending=false;
-function scheduleRender(){
-  if(renderPending)return;
-  renderPending=true;
-  requestAnimationFrame(()=>{renderPending=false;render();});
-}
-function render(){
-  const src=srcText.value, tpl=tplText.value;
-  if(!src.trim()){
-    outText.value='';
-    outCountEl.textContent='0 chars · 0 lines';
-    outFileEl.textContent='—';
-    outStatus.textContent='Waiting for source';
-    setDot(outDot,'');
-    setGlobal('Idle','');
-    clearTimeout(autoCopyTimer);
-    updateBar();
-    return;
-  }
-  const out=tpl.includes(TOKEN)?tpl.split(TOKEN).join(src):((tpl.trim()?tpl+'\n\n':'')+src);
-  outText.value=out;
-  const s=stats(out);
-  outCountEl.textContent=out.length.toLocaleString()+' chars · '+s.lines+' lines';
-  outFileEl.textContent=((fileName||'assembled').replace(/\.[^.]*$/,'')||'assembled')+'.txt';
-  outStatus.textContent='Assembled '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  setDot(outDot,'ok');
-  setGlobal('Output ready','ok');
-  updateBar();
-  if(autoCopyEl.checked)scheduleAutoCopy();else clearTimeout(autoCopyTimer);
-}
-
-function loadText(name,text){fileName=name||'';srcText.value=text;updateSrcStatus();render();
-  outText.classList.remove('flash');void outText.offsetWidth;outText.classList.add('flash');
-  buzz([12,40,12]);
-  toast('Loaded '+(name||'Markdown'));}
-function updateSrcStatus(){const t=srcText.value;
-  if(!t){srcStatus.textContent='No source loaded.';setDot(srcDot,'');return;}
-  const s=stats(t);setDot(srcDot,'on');
-  srcStatus.textContent=(fileName||'edited')+' · '+fmtBytes(s.bytes)+' · '+s.lines+' lines';}
-let srcStatusPending=false;
-function scheduleSrcStatus(){
-  if(srcStatusPending)return;
-  srcStatusPending=true;
-  requestAnimationFrame(()=>{srcStatusPending=false;updateSrcStatus();});
-}
-function readFile(f){const r=new FileReader();
-  r.onload=()=>loadText(f.name,String(r.result));
-  r.onerror=()=>toast('Could not read file','warn');r.readAsText(f);}
-fileInput.addEventListener('change',()=>{const f=fileInput.files[0];if(f)readFile(f);fileInput.value='';});
-drop.addEventListener('click',()=>fileInput.click());
-drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click();}});
-let dragDepth=0;
-['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();
-  if(ev==='dragenter')dragDepth++;drop.classList.add('over');}));
-drop.addEventListener('dragleave',e=>{e.preventDefault();
-  if(--dragDepth<=0){dragDepth=0;drop.classList.remove('over');}});
-drop.addEventListener('drop',e=>{e.preventDefault();dragDepth=0;drop.classList.remove('over');
-  const files=e.dataTransfer.files;
-  const f=(files&&files.length)?([...files].find(x=>/\.(md|markdown|txt)$/i.test(x.name))||files[0]):null;
-  if(f){readFile(f);return;}
-  const t=e.dataTransfer.getData('text');if(t)loadText('dropped.md',t);});
-window.addEventListener('dragover',e=>e.preventDefault());
-window.addEventListener('drop',e=>e.preventDefault());
-srcText.addEventListener('input',()=>{scheduleSrcStatus();scheduleRender();});
-
-$('pasteBtn').addEventListener('click',async()=>{try{
-  if(!navigator.clipboard||!navigator.clipboard.readText)throw 0;
-  const t=await navigator.clipboard.readText();
-  if(!t){toast('Clipboard is empty','warn');return;}
-  loadText(fileName||'clipboard.md',t);
-}catch{toast('Clipboard blocked — paste into the editor manually','warn');srcText.focus();}});
-$('clearBtn').addEventListener('click',()=>{srcText.value='';fileName='';updateSrcStatus();render();});
-
-let tpls=null,saveTimer=null;
-const newId=()=>'t'+(crypto.randomUUID?crypto.randomUUID().slice(0,8):Date.now().toString(36)+Math.random().toString(36).slice(2,6));
-function loadTpls(){
-  let raw=null;try{raw=localStorage.getItem(TPLS_KEY);}catch(e){}
-  if(raw){try{const p=JSON.parse(raw);
-    if(p&&Array.isArray(p.list)&&p.list.length){
-      if(!p.list.some(t=>t.id===p.active))p.active=p.list[0].id;
-      return p;}}catch(e){}}
-  let old=null;try{old=localStorage.getItem(TPL_KEY);}catch(e){}
-  const first={id:newId(),name:'Default',body:(old!==null&&old!=='')?old:DEFAULT_TPL};
-  try{localStorage.removeItem(TPL_KEY);}catch(e){}
-  return {active:first.id,list:[first]};
-}
-function persistTpls(){try{localStorage.setItem(TPLS_KEY,JSON.stringify(tpls));}catch(e){}}
-const activeTpl=()=>tpls.list.find(t=>t.id===tpls.active)||tpls.list[0];
-function tplSettled(){setDot(tplDot,'ok');tplStatus.textContent=activeTpl().name;}
-function tplTyping(){setDot(tplDot,'on');tplStatus.textContent='Saving…';}
-function commitBody(){
-  clearTimeout(saveTimer);
-  const t=activeTpl();
-  if(t&&t.body!==tplText.value){t.body=tplText.value;persistTpls();}
-  tplSettled();
-}
-function renderChips(){
-  chipsEl.innerHTML='';
-  tpls.list.forEach(t=>{
-    const b=document.createElement('button');
-    b.type='button';
-    b.className='chip'+(t.id===tpls.active?' on':'');
-    b.dataset.id=t.id;b.textContent=t.name;b.title=t.name;
-    b.setAttribute('role','tab');
-    b.setAttribute('aria-selected',t.id===tpls.active?'true':'false');
-    b.addEventListener('click',()=>switchTpl(t.id));
-    chipsEl.appendChild(b);
-  });
-}
-function switchTpl(id){
-  if(id===tpls.active)return;
-  transition(()=>{
-    commitBody();
-    tpls.active=id;persistTpls();
-    tplText.value=activeTpl().body;
-    renderChips();tplSettled();scheduleRender();buzz(6);
-  });
-}
-function newTpl(){
-  commitBody();
-  const t={id:newId(),name:'Template '+(tpls.list.length+1),body:DEFAULT_TPL};
-  tpls.list.push(t);tpls.active=t.id;
-  persistTpls();tplText.value=t.body;
-  renderChips();tplSettled();scheduleRender();buzz(8);
-  startRename();
-}
-function startRename(){
-  const t=activeTpl();if(!t)return;
-  const chip=chipsEl.querySelector('[data-id="'+t.id+'"]');if(!chip)return;
-  const input=document.createElement('input');
-  input.className='chip-edit';input.value=t.name;input.maxLength=28;
-  input.setAttribute('aria-label','Template name');
-  chip.replaceWith(input);
-  input.focus();input.select();
-  let done=false;
-  const commit=()=>{if(done)return;done=true;
-    const v=input.value.trim();
-    if(v)t.name=v;
-    persistTpls();renderChips();tplSettled();};
-  input.addEventListener('blur',commit);
-  input.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();commit();}
-    if(e.key==='Escape'){done=true;renderChips();}});
-}
-$('newTplBtn').addEventListener('click',newTpl);
-$('renameTplBtn').addEventListener('click',startRename);
-
-$('delTplBtn').addEventListener('click',()=>{
-  if(tpls.list.length<2){toast('Cannot delete the last template','warn');return;}
-  delNameEl.textContent=activeTpl().name;
-  delDialog.showModal();
-});
-$('cancelDel').addEventListener('click',()=>delDialog.close());
-$('confirmDel').addEventListener('click',()=>{
-  delDialog.close();
-  commitBody();
-  const idx=tpls.list.findIndex(t=>t.id===tpls.active);
-  const gone=tpls.list[idx].name;
-  tpls.list.splice(idx,1);
-  tpls.active=tpls.list[Math.max(0,idx-1)].id;
-  persistTpls();tplText.value=activeTpl().body;
-  renderChips();tplSettled();scheduleRender();buzz(10);
-  toast('Deleted "'+gone+'"');
-});
-$('resetTplBtn').addEventListener('click',()=>{
-  tplText.value=DEFAULT_TPL;commitBody();scheduleRender();
-  toast('Body reset to '+TOKEN);tplText.focus();});
-
-$('exportTplBtn').addEventListener('click',()=>{
-  commitBody();
-  const data=JSON.stringify({app:'md-assembler',version:1,
-    exported:new Date().toISOString(),
-    list:tpls.list.map(t=>({name:t.name,body:t.body}))},null,2);
-  downloadBlob(data,'application/json','md-assembler-templates.json');
-  buzz(12);toast('Templates exported');
-});
-$('importTplBtn').addEventListener('click',()=>tplFileInput.click());
-tplFileInput.addEventListener('change',()=>{
-  const f=tplFileInput.files[0];tplFileInput.value='';
-  if(!f)return;
-  const r=new FileReader();
-  r.onload=()=>{
-    try{
-      const p=JSON.parse(String(r.result));
-      const items=(p&&Array.isArray(p.list))?p.list:(Array.isArray(p)?p:null);
-      if(!items)throw new Error('bad shape');
-      let added=0,skipped=0;
-      items.forEach(it=>{
-        if(!it||typeof it.body!=='string'){skipped++;return;}
-        const name=(typeof it.name==='string'&&it.name.trim())?it.name.trim():'Imported';
-        if(tpls.list.some(t=>t.name.toLowerCase()===name.toLowerCase())){skipped++;return;}
-        tpls.list.push({id:newId(),name,body:it.body});
-        added++;
-      });
-      if(added){persistTpls();renderChips();buzz(10);
-        toast('Imported '+added+' template'+(added>1?'s':'')+(skipped?' · '+skipped+' skipped':''));}
-      else toast(skipped?'Nothing new to import':'No valid templates found','warn');
-    }catch(e){toast('Import failed — not a valid template file','warn');}
-  };
-  r.onerror=()=>toast('Could not read file','warn');
-  r.readAsText(f);
-});
-
-tplText.addEventListener('input',()=>{
-  tplTyping();
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(commitBody,450);
-  scheduleRender();});
-addEventListener('pagehide',commitBody);
-tpls=loadTpls();persistTpls();
-tplText.value=activeTpl().body;
-renderChips();tplSettled();
-
-copyBtn.addEventListener('click',async()=>{
-  if(!outText.value){toast('Nothing to copy yet','warn');return;}
-  await copyOutput();
-  copyBtn.classList.add('done');copyBtn.querySelector('span').textContent='Copied';
-  setTimeout(()=>{copyBtn.classList.remove('done');copyBtn.querySelector('span').textContent='Copy';},1500);});
-sendBtn.addEventListener('click',async()=>{
-  if(!outText.value){toast('Nothing to share yet','warn');return;}
-  
-  // Check if share is actually supported
-  if(typeof navigator.share !== 'function'){
-    toast('Share not supported in this browser','warn');
-    return;
-  }
-  
-  // Firefox on Android requires secure context
-  if(!window.isSecureContext){
-    toast('Share requires HTTPS — use Copy instead','warn');
-    return;
-  }
-  
-  try{
-    // Try canShare first if available (more reliable)
-    if(navigator.canShare && !navigator.canShare({text:outText.value})){
-      toast('Cannot share this content','warn');
-      return;
-    }
-    
-    await navigator.share({text:outText.value});
-    buzz(12);
-  }catch(e){
-    if(e&&e.name==='AbortError')return; // User cancelled, not an error
-    // Fallback: copy to clipboard if share fails
-    toast('Share failed — copied to clipboard instead','warn');
-    await copyOutput();
-    barFlash();
-  }
-});
-dlBtn.addEventListener('click',()=>{
-  if(!outText.value){toast('Nothing to download yet','warn');return;}
-  const base=(fileName||'assembled').replace(/\.[^.]*$/,'')||'assembled';
-  downloadBlob(outText.value,'text/plain;charset=utf-8',base+'.txt');
-  buzz(12);toast('Downloading '+base+'.txt');});
-barCopy.addEventListener('click',async()=>{
-  if(!outText.value)return;
-  if(await copyOutput())barFlash();});
-autoCopyEl.addEventListener('change',async()=>{
-  try{localStorage.setItem(AC_KEY,autoCopyEl.checked?'1':'0');}catch(e){}
-  buzz(8);
-  if(autoCopyEl.checked&&outText.value){if(await copyOutput())barFlash();}});
-
-try{
-  if('launchQueue' in window && 'LaunchParams' in window && 'files' in LaunchParams.prototype){
-    launchQueue.setConsumer(async params=>{
-      if(!params.files||!params.files.length)return;
-      try{const file=await params.files[0].getFile();loadText(file.name,await file.text());}
-      catch{toast('Could not open that file','warn');}
-    });
-  }
-}catch{}
-
-let autoLoaded=false;
-(function incoming(){
-  try{const q=new URLSearchParams(location.search),t=q.get('text');
-    if(t){history.replaceState(null,'',location.pathname);
-      autoLoaded=true;
-      loadText(q.get('title')||'shared.md',t);return;}}catch{}
-  if('caches' in window){caches.open('mda-share').then(async c=>{
-    const r=await c.match('/__shared');if(!r)return;await c.delete('/__shared');
-    try{const d=await r.json();if(d&&d.text){autoLoaded=true;loadText(d.name||'shared.md',d.text);}}catch{}
-  }).catch(()=>{});}})();
-
-(function pwa(){
-  const icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="104" fill="#121110"/><rect x="86" y="86" width="234" height="234" rx="50" fill="none" stroke="#efe9e0" stroke-width="36"/><rect x="196" y="196" width="230" height="230" rx="50" fill="#c1442c"/></svg>');
-  const manifest={name:'Markdown Assembler',short_name:'MD Assembler',
-    description:'MarkDownload → .md → Assemble → ready TXT',
-    start_url:'.',scope:'.',display:'standalone',
-    background_color:'#121110',theme_color:'#121110',
-    icons:[{src:icon,sizes:'512x512',type:'image/svg+xml',purpose:'any'},
-           {src:icon,sizes:'192x192',type:'image/svg+xml',purpose:'maskable'}],
-    file_handlers:[{action:'.',accept:{
-      'text/markdown':['.md','.markdown'],'text/plain':['.txt']}}],
-    launch_handler:{client_mode:'focus-existing'},
-    share_target:{action:'.',method:'POST',enctype:'multipart/form-data',
-      params:[{name:'text'},{name:'title'},
-        {files:[{name:'md',accepts:['text/markdown','text/plain','application/markdown',
-          'application/octet-stream','.md','.markdown','.txt']}]}]}};
-  const l=document.createElement('link');l.rel='manifest';
-  l.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/json'}));
-  document.head.appendChild(l);
-  let deferred=null;const installBtn=$('installBtn');
-  addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;installBtn.hidden=false;});
-  installBtn.addEventListener('click',async()=>{if(!deferred)return;
-    await deferred.prompt();deferred=null;installBtn.hidden=true;});
-  addEventListener('appinstalled',()=>{installBtn.hidden=true;setGlobal('Installed','ok');});
-  if('serviceWorker' in navigator){addEventListener('load',
-    ()=>navigator.serviceWorker.register('sw.js').catch(()=>{}),{once:true});}
-})();
-
-if(!autoLoaded){updateSrcStatus();render();}
-})();
-</script>
+  <script src="scripts.js" defer></script>
 </body>
 </html>
