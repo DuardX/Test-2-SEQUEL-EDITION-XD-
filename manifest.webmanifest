@@ -1,1 +1,54 @@
-{"name":"Markdown Assembler","short_name":"Assembler","start_url":"./","display":"standalone","background_color":"#0b1020","theme_color":"#111827","share_target":{"action":"/share-target","method":"POST","enctype":"multipart/form-data","params":{"title":"title","text":"text","files":[{"name":"file","accept":["text/markdown","text/plain",".md",".markdown",".txt"]}]}}}
+{
+  "id": "./",
+  "name": "Markdown Assembler",
+  "short_name": "MD Assembler",
+  "description": "MarkDownload → .md → Assemble → ready TXT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121110",
+  "theme_color": "#121110",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "share_target": {
+    "action": "./share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": [
+      { "name": "title" },
+      { "name": "text" },
+      {
+        "name": "file",
+        "accept": {
+          "text/markdown": [".md", ".markdown"],
+          "text/plain": [".txt"]
+        }
+      }
+    ]
+  },
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "text/markdown": [".md", ".markdown"],
+        "text/plain": [".txt"]
+      },
+      "launch_type": "focus-existing"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}
