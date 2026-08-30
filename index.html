@@ -143,7 +143,7 @@
         <span class="step-status"><i class="dot" id="srcDot"></i><span id="srcStatus">No source loaded.</span></span>
       </div>
 
-      <label class="drop" id="drop" for="fileInput" tabindex="0" role="button" aria-label="Choose a Markdown file or drop one here">
+      <label class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a Markdown file or drop one here">
         <svg class="icon icon--drop drop-ic" aria-hidden="true"><use href="#i-drop"/></svg>
         <div><b>Choose a Markdown file</b><span>or drop it here &middot; .md / .markdown / .txt</span></div>
       </label>
@@ -151,6 +151,11 @@
       <div class="row">
         <button class="btn sm" id="pasteBtn"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg><span>Paste Markdown</span></button>
         <button class="btn sm" id="clearBtn"><svg class="icon" aria-hidden="true"><use href="#i-clear"/></svg><span>Clear</span></button>
+        <label class="toggle" title="Delete the source file after it loads (Chromium browsers only)">
+          <input type="checkbox" id="autoDelete" checked>
+          <span class="track" aria-hidden="true"></span>
+          <span class="lbl">Auto-delete</span>
+        </label>
       </div>
 
       <textarea id="srcText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Markdown source" placeholder="Loaded Markdown appears here — edit it and the output updates live."></textarea>
