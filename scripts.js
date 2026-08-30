@@ -10,6 +10,7 @@
   const DEFAULT_TPL = TOKEN;
   const THEME_KEY = "mda.theme.v1";
   const AC_KEY = "mda.autocopy.v1";
+  const AD_KEY = "mda.autodelete.v1";
   const SHARE_CACHE_URL = new URL("./__shared", location.href).href;
 
   const fileInput = $("fileInput");
@@ -35,6 +36,7 @@
   const barCopy = $("barCopy");
   const barLabel = $("barLabel");
   const autoCopyEl = $("autoCopy");
+  const autoDeleteEl = $("autoDelete");
   const chipsEl = $("chips");
   const tplFileInput = $("tplFileInput");
   const delDialog = $("delDialog");
@@ -362,7 +364,7 @@
       const text = await f.text();
       loadText(f.name, text);
 
-      if (fileHandle && /\.(md|markdown)$/i.test(f.name)) {
+      if (autoDeleteEl.checked && fileHandle && /\.(md|markdown)$/i.test(f.name)) {
         try {
           const perm = await fileHandle.requestPermission({ mode: "readwrite" });
           if (perm !== "granted") throw new Error("readwrite permission not granted");
@@ -385,12 +387,6 @@
         const handles = await window.showOpenFilePicker({
           multiple: true,
           startIn: "downloads",
-          types: [
-            {
-              description: "Markdown files",
-              accept: { "text/markdown": [".md", ".markdown"] },
-            },
-          ],
         });
 
         let chosen = handles[0];
@@ -907,6 +903,13 @@
     }
   });
 
+  autoDeleteEl.addEventListener("change", () => {
+    try {
+      localStorage.setItem(AD_KEY, autoDeleteEl.checked ? "1" : "0");
+    } catch (e) {}
+    buzz(8);
+  });
+
   // ===== Launch Queue / Share Target =====
   try {
     if ("launchQueue" in window && "LaunchParams" in window && "files" in LaunchParams.prototype) {
@@ -1000,6 +1003,10 @@
   // ===== Init =====
   try {
     autoCopyEl.checked = localStorage.getItem(AC_KEY) === "1";
+  } catch (e) {}
+
+  try {
+    autoDeleteEl.checked = localStorage.getItem(AD_KEY) !== "0";
   } catch (e) {}
 
   if (!autoLoaded) {
