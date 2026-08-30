@@ -345,11 +345,84 @@
   }
 
   // ===== File input & drop =====
-  function readFile(f) {
-    const r = new FileReader();
-    r.onload = () => loadText(f.name, String(r.result));
-    r.onerror = () => toast("Could not read file", "warn");
-    r.readAsText(f);
+  // A normal <input type=file> gives us only a File object, which browsers
+  // intentionally cannot delete. Chromium's File System Access API can
+  // grant a per-file handle (via showOpenFilePicker) that supports remove()
+  // after a successful read.
+  //
+  // This deliberately uses a *file* handle, not a directory handle. Chrome
+  // refuses to hand out a directory handle for Downloads/Desktop/Documents/
+  // the home folder (its built-in "sensitive folder" blocklist — the picker
+  // shows "Can't open this folder" and won't let you confirm the selection),
+  // but picking an individual file that happens to live inside one of those
+  // folders is fine. That's the fix for the "Chrome won't let me use my
+  // Downloads folder" problem.
+  async function readFile(f, fileHandle = null) {
+    try {
+      const text = await f.text();
+      loadText(f.name, text);
+
+      if (fileHandle && /\.(md|markdown)$/i.test(f.name)) {
+        try {
+          const perm = await fileHandle.requestPermission({ mode: "readwrite" });
+          if (perm !== "granted") throw new Error("readwrite permission not granted");
+          await fileHandle.remove();
+          toast("Loaded and deleted " + f.name);
+        } catch (err) {
+          console.warn("Could not delete source file", err);
+          toast("Loaded " + f.name + " — could not delete it", "warn");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast("Could not read file", "warn");
+    }
+  }
+
+  async function chooseFile() {
+    if (typeof window.showOpenFilePicker === "function") {
+      try {
+        const handles = await window.showOpenFilePicker({
+          multiple: true,
+          startIn: "downloads",
+          types: [
+            {
+              description: "Markdown files",
+              accept: { "text/markdown": [".md", ".markdown"] },
+            },
+          ],
+        });
+
+        let chosen = handles[0];
+        if (handles.length > 1) {
+          const listing = handles.map((h, i) => `${i + 1}. ${h.name}`).join("\n");
+          const answer = prompt("Choose the Markdown file to assemble:\n\n" + listing + "\n\nEnter its number:");
+          if (answer === null) return;
+          const n = Number.parseInt(answer, 10);
+          if (!Number.isInteger(n) || n < 1 || n > handles.length) {
+            toast("Invalid file selection", "warn");
+            return;
+          }
+          chosen = handles[n - 1];
+        }
+
+        const file = await chosen.getFile();
+        await readFile(file, chosen);
+        return;
+      } catch (err) {
+        if (err && err.name === "AbortError") return;
+        console.warn("File picker unavailable or failed", err);
+      }
+    }
+
+    // Safe fallback for Firefox, Safari, and any browser without File
+    // System Access. Auto-delete genuinely can't happen here — a plain
+    // <input type=file> only ever hands the page a read-only File object,
+    // by browser design (Firefox has no shipped equivalent to
+    // showOpenFilePicker/showDirectoryPicker). That's the "Gecko can't use
+    // this" limitation, and there's no client-side workaround for it —
+    // the file still loads normally, it just won't be deleted afterward.
+    fileInput.click();
   }
 
   fileInput.addEventListener("change", () => {
@@ -358,10 +431,17 @@
     fileInput.value = "";
   });
 
+  // Prevent the label's default <label for=fileInput> action so supported
+  // Chromium builds use the directory picker instead of the legacy picker.
+  drop.addEventListener("click", (e) => {
+    e.preventDefault();
+    chooseFile();
+  });
+
   drop.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      fileInput.click();
+      chooseFile();
     }
   });
 
@@ -447,13 +527,16 @@
       ? crypto.randomUUID().slice(0, 8)
       : Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
 
+  // Проверка наличия токена в теле шаблона (регистронезависимо, с допустимыми пробелами)
   const hasToken = (body) => TOKEN_RE.test(body || "");
 
+  // Проверка уникальности имени среди всех шаблонов, кроме шаблона с указанным id
   const nameIsFree = (name, exceptId) => {
     const n = name.trim().toLowerCase();
     return !tpls.list.some((t) => t.id !== exceptId && t.name.toLowerCase() === n);
   };
 
+  // Генерация первого свободного имени "Template N"
   const nextFreeName = () => {
     const used = new Set(tpls.list.map((t) => t.name.trim().toLowerCase()));
     let i = tpls.list.length + 1;
@@ -490,6 +573,7 @@
 
   const activeTpl = () => tpls.list.find((t) => t.id === tpls.active) || tpls.list[0];
 
+  // Обновление статуса шаблона с учётом валидации токена
   function tplSettled() {
     const t = activeTpl();
     if (hasToken(t.body)) {
@@ -502,7 +586,8 @@
   }
 
   function tplTyping() {
-    if (hasToken(tplText.value)) {
+    const body = tplText.value;
+    if (hasToken(body)) {
       setDot(tplDot, "on");
       tplStatus.textContent = "Saving…";
     } else {
@@ -518,7 +603,7 @@
       t.body = tplText.value;
       persistTpls();
       if (!silent && !hasToken(t.body)) {
-        toast("Template saved, but " + TOKEN + " is missing", "warn");
+        toast('Template saved, but ' + TOKEN + ' is missing', "warn");
       }
     }
     tplSettled();
@@ -543,6 +628,10 @@
   function switchTpl(id) {
     if (id === tpls.active) return;
     transition(() => {
+      const old = activeTpl();
+      if (old && old.body !== tplText.value && !hasToken(tplText.value)) {
+        toast('Template saved without ' + TOKEN, "warn");
+      }
       commitBody(true);
       tpls.active = id;
       persistTpls();
@@ -589,13 +678,16 @@
       done = true;
       const v = input.value.trim();
       if (!v) {
+        // Пустое имя — откат
         toast("Name cannot be empty", "warn");
         t.name = originalName;
       } else if (v.toLowerCase() === originalName.toLowerCase()) {
-        // unchanged
+        // Имя не изменилось (регистронезависимо) — ок
       } else if (!nameIsFree(v, t.id)) {
+        // Имя уже занято другим шаблоном — откат
         toast('Name "' + v + '" is already used', "warn");
         t.name = originalName;
+        input.classList.add("invalid");
       } else {
         t.name = v;
       }
@@ -671,7 +763,7 @@
     buzz(12);
     if (missing.length) {
       const names = missing.map((t) => '"' + t.name + '"').join(", ");
-      toast("Exported · " + missing.length + " missing " + TOKEN + ": " + names, "warn");
+      toast("Exported · " + missing.length + " template(s) missing " + TOKEN + ": " + names, "warn");
     } else {
       toast("Templates exported");
     }
@@ -687,20 +779,14 @@
     r.onload = () => {
       try {
         const raw = String(r.result);
-        let p;
-        try {
-          p = JSON.parse(raw);
-        } catch (e) {
-          // Fallback only: repair keys mangled by an external formatter.
-          const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
-          p = JSON.parse(fixed);
-        }
+        // Normalize keys that may have trailing spaces from broken formatters
+        const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
+        const p = JSON.parse(fixed);
+
         const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
         if (!items) throw new Error("bad shape");
         let added = 0;
-        let updated = 0;
         let skipped = 0;
-        let activeTouched = false;
         items.forEach((it) => {
           if (!it || typeof it.body !== "string") {
             skipped++;
@@ -708,35 +794,23 @@
           }
           const name =
             typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
-          const existing = tpls.list.find((t) => t.name.toLowerCase() === name.toLowerCase());
-          if (existing) {
-            if (existing.body === it.body) {
-              skipped++;
-            } else {
-              existing.body = it.body;
-              updated++;
-              if (existing.id === tpls.active) activeTouched = true;
-            }
+          if (tpls.list.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+            skipped++;
             return;
           }
           tpls.list.push({ id: newId(), name, body: it.body });
           added++;
         });
-        if (added || updated) {
+        if (added) {
           persistTpls();
           renderChips();
-          if (activeTouched) {
-            tplText.value = activeTpl().body;
-            scheduleRender();
-          }
           buzz(10);
-          const parts = [];
-          if (added) parts.push(added + " added");
-          if (updated) parts.push(updated + " updated");
-          toast("Imported — " + parts.join(", "));
-          tplSettled();
+          toast(
+            "Imported " + added + " template" + (added > 1 ? "s" : "") +
+            (skipped ? " · " + skipped + " skipped" : "")
+          );
         } else {
-          toast(skipped ? "Already up to date" : "No valid templates found", "warn");
+          toast(skipped ? "Nothing new to import" : "No valid templates found", "warn");
         }
       } catch (e) {
         toast("Import failed — not a valid template file", "warn");
@@ -892,17 +966,7 @@
   let deferredPrompt = null;
   const installBtn = $("installBtn");
 
-  // Detect if already running as an installed PWA
-  const isStandalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true;
-
-  if (isStandalone) {
-    installBtn.hidden = true;
-  }
-
   window.addEventListener("beforeinstallprompt", (e) => {
-    if (isStandalone) return;
     e.preventDefault();
     deferredPrompt = e;
     installBtn.hidden = false;
@@ -918,11 +982,6 @@
   window.addEventListener("appinstalled", () => {
     installBtn.hidden = true;
     setGlobal("Installed", "ok");
-  });
-
-  // Hide the button if the app gets installed mid-session
-  window.matchMedia("(display-mode: standalone)").addEventListener("change", (e) => {
-    if (e.matches) installBtn.hidden = true;
   });
 
   if ("serviceWorker" in navigator) {
