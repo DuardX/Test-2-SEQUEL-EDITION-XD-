@@ -1,7 +1,4 @@
-(() => {
-  "use strict";
-
-  const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 
   const TOKEN = "{{MARKDOWN}}";
   const TOKEN_RE = /\{\{\s*MARKDOWN\s*\}\}/i;
@@ -11,6 +8,8 @@
   const THEME_KEY = "mda.theme.v1";
   const AC_KEY = "mda.autocopy.v1";
   const AD_KEY = "mda.autodelete.v1";
+  const FS_ACCESS_SUPPORTED = typeof window.showOpenFilePicker === "function";
+  const UNDO_WINDOW_MS = 6000;
   const SHARE_CACHE_URL = new URL("./__shared", location.href).href;
 
   const fileInput = $("fileInput");
@@ -189,13 +188,22 @@
     lines: t ? t.split("\n").length : 0,
   });
 
-  function toast(msg, tone) {
+  function toast(msg, tone, onTap) {
     toastEl.textContent = msg;
-    toastEl.className = "show" + (tone ? " " + tone : "");
+    toastEl.className = "show" + (tone ? " " + tone : "") + (onTap ? " clickable" : "");
+    toastEl.onclick = onTap
+      ? () => {
+          clearTimeout(toastTimer);
+          toastEl.className = "";
+          toastEl.onclick = null;
+          onTap();
+        }
+      : null;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       toastEl.className = "";
-    }, 2300);
+      toastEl.onclick = null;
+    }, onTap ? UNDO_WINDOW_MS + 300 : 2300);
   }
 
   const setDot = (d, c) => {
@@ -359,21 +367,36 @@
   // but picking an individual file that happens to live inside one of those
   // folders is fine. That's the fix for the "Chrome won't let me use my
   // Downloads folder" problem.
+  //
+  // Deletion is delayed rather than immediate: nothing is removed from disk
+  // until UNDO_WINDOW_MS passes with no tap on the toast. That means "undo"
+  // never has to resurrect a file after the fact — it just cancels a timer,
+  // so there's no dependency on whether a handle can still write after the
+  // entry it pointed to is gone.
   async function readFile(f, fileHandle = null) {
     try {
       const text = await f.text();
       loadText(f.name, text);
 
       if (autoDeleteEl.checked && fileHandle && /\.(md|markdown)$/i.test(f.name)) {
-        try {
-          const perm = await fileHandle.requestPermission({ mode: "readwrite" });
-          if (perm !== "granted") throw new Error("readwrite permission not granted");
-          await fileHandle.remove();
-          toast("Loaded and deleted " + f.name);
-        } catch (err) {
-          console.warn("Could not delete source file", err);
-          toast("Loaded " + f.name + " — could not delete it", "warn");
-        }
+        const name = f.name;
+
+        const timer = setTimeout(async () => {
+          try {
+            const perm = await fileHandle.requestPermission({ mode: "readwrite" });
+            if (perm !== "granted") throw new Error("readwrite permission not granted");
+            await fileHandle.remove();
+            toast("Deleted " + name);
+          } catch (err) {
+            console.warn("Could not delete source file", err);
+            toast("Loaded " + name + " — could not delete it", "warn");
+          }
+        }, UNDO_WINDOW_MS);
+
+        toast("Loaded " + name + " — deleting in a few seconds, tap to keep it", null, () => {
+          clearTimeout(timer);
+          toast("Kept " + name);
+        });
       }
     } catch (err) {
       console.error(err);
@@ -382,28 +405,11 @@
   }
 
   async function chooseFile() {
-    if (typeof window.showOpenFilePicker === "function") {
+    if (FS_ACCESS_SUPPORTED) {
       try {
-        const handles = await window.showOpenFilePicker({
-          multiple: true,
-          startIn: "downloads",
-        });
-
-        let chosen = handles[0];
-        if (handles.length > 1) {
-          const listing = handles.map((h, i) => `${i + 1}. ${h.name}`).join("\n");
-          const answer = prompt("Choose the Markdown file to assemble:\n\n" + listing + "\n\nEnter its number:");
-          if (answer === null) return;
-          const n = Number.parseInt(answer, 10);
-          if (!Number.isInteger(n) || n < 1 || n > handles.length) {
-            toast("Invalid file selection", "warn");
-            return;
-          }
-          chosen = handles[n - 1];
-        }
-
-        const file = await chosen.getFile();
-        await readFile(file, chosen);
+        const [handle] = await window.showOpenFilePicker({ startIn: "downloads" });
+        const file = await handle.getFile();
+        await readFile(file, handle);
         return;
       } catch (err) {
         if (err && err.name === "AbortError") return;
@@ -428,7 +434,8 @@
   });
 
   // Prevent the label's default <label for=fileInput> action so supported
-  // Chromium builds use the directory picker instead of the legacy picker.
+  // Chromium builds use the File System Access picker (with delete
+  // support) instead of the plain <input> fallback.
   drop.addEventListener("click", (e) => {
     e.preventDefault();
     chooseFile();
@@ -523,16 +530,16 @@
       ? crypto.randomUUID().slice(0, 8)
       : Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
 
-  // Проверка наличия токена в теле шаблона (регистронезависимо, с допустимыми пробелами)
+  // Checks whether the template body contains the token (case-insensitive, allows surrounding whitespace)
   const hasToken = (body) => TOKEN_RE.test(body || "");
 
-  // Проверка уникальности имени среди всех шаблонов, кроме шаблона с указанным id
+  // Checks whether a name is unique among all templates except the one with the given id
   const nameIsFree = (name, exceptId) => {
     const n = name.trim().toLowerCase();
     return !tpls.list.some((t) => t.id !== exceptId && t.name.toLowerCase() === n);
   };
 
-  // Генерация первого свободного имени "Template N"
+  // Generates the first free "Template N" name
   const nextFreeName = () => {
     const used = new Set(tpls.list.map((t) => t.name.trim().toLowerCase()));
     let i = tpls.list.length + 1;
@@ -569,7 +576,7 @@
 
   const activeTpl = () => tpls.list.find((t) => t.id === tpls.active) || tpls.list[0];
 
-  // Обновление статуса шаблона с учётом валидации токена
+  // Refreshes the template status, including token validation
   function tplSettled() {
     const t = activeTpl();
     if (hasToken(t.body)) {
@@ -674,13 +681,13 @@
       done = true;
       const v = input.value.trim();
       if (!v) {
-        // Пустое имя — откат
+        // Empty name — revert
         toast("Name cannot be empty", "warn");
         t.name = originalName;
       } else if (v.toLowerCase() === originalName.toLowerCase()) {
-        // Имя не изменилось (регистронезависимо) — ок
+        // Name unchanged (case-insensitive) — fine
       } else if (!nameIsFree(v, t.id)) {
-        // Имя уже занято другим шаблоном — откат
+        // Name already taken by another template — revert
         toast('Name "' + v + '" is already used', "warn");
         t.name = originalName;
         input.classList.add("invalid");
@@ -767,53 +774,56 @@
 
   $("importTplBtn").addEventListener("click", () => tplFileInput.click());
 
-  tplFileInput.addEventListener("change", () => {
+  tplFileInput.addEventListener("change", async () => {
     const f = tplFileInput.files[0];
     tplFileInput.value = "";
     if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const raw = String(r.result);
-        // Normalize keys that may have trailing spaces from broken formatters
-        const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
-        const p = JSON.parse(fixed);
 
-        const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
-        if (!items) throw new Error("bad shape");
-        let added = 0;
-        let skipped = 0;
-        items.forEach((it) => {
-          if (!it || typeof it.body !== "string") {
-            skipped++;
-            return;
-          }
-          const name =
-            typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
-          if (tpls.list.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
-            skipped++;
-            return;
-          }
-          tpls.list.push({ id: newId(), name, body: it.body });
-          added++;
-        });
-        if (added) {
-          persistTpls();
-          renderChips();
-          buzz(10);
-          toast(
-            "Imported " + added + " template" + (added > 1 ? "s" : "") +
-            (skipped ? " · " + skipped + " skipped" : "")
-          );
-        } else {
-          toast(skipped ? "Nothing new to import" : "No valid templates found", "warn");
+    let raw;
+    try {
+      raw = await f.text();
+    } catch (e) {
+      toast("Could not read file", "warn");
+      return;
+    }
+
+    try {
+      // Normalize keys that may have trailing spaces from broken formatters
+      const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
+      const p = JSON.parse(fixed);
+
+      const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
+      if (!items) throw new Error("bad shape");
+      let added = 0;
+      let skipped = 0;
+      items.forEach((it) => {
+        if (!it || typeof it.body !== "string") {
+          skipped++;
+          return;
         }
-      } catch (e) {
-        toast("Import failed — not a valid template file", "warn");
+        const name =
+          typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
+        if (tpls.list.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+          skipped++;
+          return;
+        }
+        tpls.list.push({ id: newId(), name, body: it.body });
+        added++;
+      });
+      if (added) {
+        persistTpls();
+        renderChips();
+        buzz(10);
+        toast(
+          "Imported " + added + " template" + (added > 1 ? "s" : "") +
+          (skipped ? " · " + skipped + " skipped" : "")
+        );
+      } else {
+        toast(skipped ? "Nothing new to import" : "No valid templates found", "warn");
       }
-    };
-    r.onerror = () => toast("Could not read file", "warn");
-    r.readAsText(f);
+    } catch (e) {
+      toast("Import failed — not a valid template file", "warn");
+    }
   });
 
   tplText.addEventListener("input", () => {
@@ -1006,11 +1016,17 @@
   } catch (e) {}
 
   try {
-    autoDeleteEl.checked = localStorage.getItem(AD_KEY) !== "0";
+    if (FS_ACCESS_SUPPORTED) {
+      autoDeleteEl.checked = localStorage.getItem(AD_KEY) !== "0";
+    } else {
+      autoDeleteEl.checked = false;
+      autoDeleteEl.disabled = true;
+      const lbl = autoDeleteEl.closest(".toggle");
+      if (lbl) lbl.title = "Not available in this browser — needs a Chromium-based browser (Chrome, Edge, Brave, etc.)";
+    }
   } catch (e) {}
 
   if (!autoLoaded) {
     updateSrcStatus();
     render();
   }
-})();
