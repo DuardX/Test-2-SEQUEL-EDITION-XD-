@@ -1,7 +1,7 @@
 const SHARE_CACHE = "mda-share";
 const SHARE_CACHE_KEY = new URL("./__shared", self.registration.scope).href;
 
-const SHELL_VERSION = "v1";
+const SHELL_VERSION = "v2";
 const SHELL_CACHE = "mda-shell-" + SHELL_VERSION;
 const SHELL_URLS = [
   "./",
