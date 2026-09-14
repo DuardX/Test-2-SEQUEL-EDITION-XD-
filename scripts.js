@@ -61,16 +61,19 @@ const transition = (fn) => {
   }
 };
 
-// ===== Theme =====
 const themeBtns = [...document.querySelectorAll("[data-set-theme]")];
 
 function saveTheme(id) {
-  try { localStorage.setItem(THEME_KEY, id); } catch (e) {}
+  try {
+    localStorage.setItem(THEME_KEY, id);
+  } catch (e) {}
+
   const writeCookie = () => {
     try {
       document.cookie = `${THEME_KEY}=${encodeURIComponent(id)};max-age=31536000;path=/;SameSite=Lax`;
     } catch (e) {}
   };
+
   if ("requestIdleCallback" in window) {
     requestIdleCallback(writeCookie, { timeout: 1000 });
   } else {
@@ -80,16 +83,27 @@ function saveTheme(id) {
 
 function loadTheme() {
   let t = null;
-  try { t = localStorage.getItem(THEME_KEY); } catch (e) {}
+
+  try {
+    t = localStorage.getItem(THEME_KEY);
+  } catch (e) {}
+
   if (!t) {
     const m = document.cookie.match(
       new RegExp("(?:^|;\\s*)" + THEME_KEY.replace(/\./g, "\\.") + "=([^;]*)")
     );
-    if (m) t = decodeURIComponent(m[1]);
+
+    if (m) {
+      t = decodeURIComponent(m[1]);
+    }
+
     if (t) {
-      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+      try {
+        localStorage.setItem(THEME_KEY, t);
+      } catch (e) {}
     }
   }
+
   return t;
 }
 
@@ -101,6 +115,7 @@ function setThemeMenu(open) {
 function updateTrigger(id) {
   const active = themeBtns.find((b) => b.dataset.setTheme === id);
   if (!active) return;
+
   triggerSwatch.style.setProperty("--sw-bg", active.style.getPropertyValue("--sw-bg"));
   triggerSwatch.style.setProperty("--sw-acc", active.style.getPropertyValue("--sw-acc"));
   triggerLabel.textContent = active.dataset.themeName || active.textContent.trim();
@@ -109,15 +124,24 @@ function updateTrigger(id) {
 function applyTheme(id, persist) {
   transition(() => {
     document.documentElement.dataset.theme = id;
+
     themeBtns.forEach((b) => {
       b.setAttribute("aria-checked", b.dataset.setTheme === id ? "true" : "false");
     });
+
     updateTrigger(id);
-    if (persist) saveTheme(id);
+
+    if (persist) {
+      saveTheme(id);
+    }
+
     requestAnimationFrame(() => {
       const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
       const meta = document.querySelector('meta[name="theme-color"]:not([media])');
-      if (meta && bg) meta.content = bg;
+
+      if (meta && bg) {
+        meta.content = bg;
+      }
     });
   });
 }
@@ -141,18 +165,24 @@ document.addEventListener("keydown", (e) => {
 
 themeMenu.addEventListener("keydown", (e) => {
   if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+
   const buttons = [...themeMenu.querySelectorAll('[role="radio"]')];
   const currentIndex = buttons.findIndex((b) => b === document.activeElement);
+
   if (currentIndex === -1) return;
+
   e.preventDefault();
+
   if (e.key === "Home") {
     buttons[0].focus();
     return;
   }
+
   if (e.key === "End") {
     buttons[buttons.length - 1].focus();
     return;
   }
+
   const delta = e.key === "ArrowDown" ? 1 : -1;
   buttons[(currentIndex + delta + buttons.length) % buttons.length].focus();
 });
@@ -165,6 +195,7 @@ themeBtns.forEach((b) => {
 });
 
 const savedTheme = loadTheme();
+
 applyTheme(
   savedTheme && themeBtns.some((b) => b.dataset.setTheme === savedTheme)
     ? savedTheme
@@ -172,7 +203,6 @@ applyTheme(
   false
 );
 
-// ===== Helpers =====
 const fmtBytes = (b) =>
   b < 1024
     ? b + " B"
@@ -187,24 +217,27 @@ const stats = (t) => ({
 
 function toast(msg, tone, onTap) {
   toastEl.textContent = msg;
-  toastEl.className = "show " + (tone ? " " + tone : " ") + (onTap ? " clickable " : " ");
+  toastEl.className = "show" + (tone ? " " + tone : "") + (onTap ? " clickable" : "");
+
   toastEl.onclick = onTap
     ? () => {
         clearTimeout(toastTimer);
-        toastEl.className = " ";
+        toastEl.className = "";
         toastEl.onclick = null;
         onTap();
       }
     : null;
+
   clearTimeout(toastTimer);
+
   toastTimer = setTimeout(() => {
-    toastEl.className = " ";
+    toastEl.className = "";
     toastEl.onclick = null;
   }, onTap ? UNDO_WINDOW_MS + 300 : 2300);
 }
 
 const setDot = (d, c) => {
-  d.className = "dot" + (c ? " " + c : "");
+  d.className = c ? "dot " + c : "dot";
 };
 
 const setGlobal = (s, c) => {
@@ -215,11 +248,14 @@ const setGlobal = (s, c) => {
 function downloadBlob(data, mime, filename) {
   const url = URL.createObjectURL(new Blob([data], { type: mime }));
   const a = document.createElement("a");
+
   a.href = url;
   a.download = filename;
+
   document.body.appendChild(a);
   a.click();
   a.remove();
+
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
@@ -231,32 +267,41 @@ const buzz = (p) => {
 
 async function copyOutput() {
   if (!outText.value) return false;
+
   try {
     await navigator.clipboard.writeText(outText.value);
   } catch (e) {
     outText.focus();
     outText.select();
+
     try {
       document.execCommand("copy");
-    } catch (_) {}
+    } catch (err) {}
+
     const sel = getSelection();
     if (sel) sel.removeAllRanges();
   }
+
   buzz(12);
   return true;
 }
 
 function updateBar() {
   const has = !!outText.value;
+
   actionbar.classList.toggle("show", has);
   actionbar.setAttribute("aria-hidden", has ? "false" : "true");
-  if (has && !barBusy) barLabel.textContent = "Copy result";
+
+  if (has && !barBusy) {
+    barLabel.textContent = "Copy result";
+  }
 }
 
 function barFlash() {
   barBusy = true;
   barCopy.classList.add("done");
   barLabel.textContent = "Copied";
+
   setTimeout(() => {
     barBusy = false;
     barCopy.classList.remove("done");
@@ -266,39 +311,56 @@ function barFlash() {
 
 function scheduleAutoCopy() {
   clearTimeout(autoCopyTimer);
+
   autoCopyTimer = setTimeout(async () => {
     if (!outText.value || !autoCopyEl.checked) return;
-    if (await copyOutput()) barFlash();
+
+    if (await copyOutput()) {
+      barFlash();
+    }
   }, 600);
 }
 
-// ===== Rendering =====
 function render() {
   const src = srcText.value;
   const tpl = tplText.value;
+
   if (!src.trim()) {
     outText.value = "";
     outCountEl.textContent = "0 chars · 0 lines";
     outFileEl.textContent = "—";
     outStatus.textContent = "Waiting for source";
+
     setDot(outDot, "");
     setGlobal("Idle", "");
+
     clearTimeout(autoCopyTimer);
     updateBar();
+
     return;
   }
+
   const out = tpl.includes(TOKEN)
     ? tpl.split(TOKEN).join(src)
     : (tpl.trim() ? tpl + "\n\n" : "") + src;
+
   outText.value = out;
+
   const s = stats(out);
+
   outCountEl.textContent = out.length.toLocaleString() + " chars · " + s.lines + " lines";
-  const baseName = (fileName || "assembled").replace(/.[^.]*$/, "") || "assembled";
+
+  const baseName = (fileName || "assembled").replace(/\.[^.]*$/, "") || "assembled";
   outFileEl.textContent = baseName + ".txt";
-  outStatus.textContent = "Assembled " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  outStatus.textContent =
+    "Assembled " +
+    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
   setDot(outDot, "ok");
   setGlobal("Output ready", "ok");
   updateBar();
+
   if (autoCopyEl.checked) {
     scheduleAutoCopy();
   } else {
@@ -308,7 +370,9 @@ function render() {
 
 function scheduleRender() {
   if (renderPending) return;
+
   renderPending = true;
+
   requestAnimationFrame(() => {
     renderPending = false;
     render();
@@ -318,63 +382,73 @@ function scheduleRender() {
 function loadText(name, text) {
   fileName = name || "";
   srcText.value = text;
+
   updateSrcStatus();
   render();
+
   outText.classList.remove("flash");
   void outText.offsetWidth;
   outText.classList.add("flash");
+
   buzz([12, 40, 12]);
   toast("Loaded " + (name || "Markdown"));
 }
 
 function updateSrcStatus() {
   const t = srcText.value;
+
   if (!t) {
     srcStatus.textContent = "No source loaded.";
     setDot(srcDot, "");
     return;
   }
+
   const s = stats(t);
+
   setDot(srcDot, "on");
-  srcStatus.textContent = (fileName || "edited") + " · " + fmtBytes(s.bytes) + " · " + s.lines + " lines";
+  srcStatus.textContent =
+    (fileName || "edited") + " · " + fmtBytes(s.bytes) + " · " + s.lines + " lines";
 }
 
 function scheduleSrcStatus() {
   if (srcStatusPending) return;
+
   srcStatusPending = true;
+
   requestAnimationFrame(() => {
     srcStatusPending = false;
     updateSrcStatus();
   });
 }
 
-// ===== File input & drop =====
 async function readFile(f, fileHandle = null, hasReadWrite = false) {
   try {
     const text = await f.text();
     loadText(f.name, text);
+
     if (autoDeleteEl.checked && fileHandle && /\.(md|markdown)$/i.test(f.name)) {
       const name = f.name;
+
       if (!hasReadWrite) {
         toast("Loaded " + name + " — read-only access, can't auto-delete", "warn");
         return;
       }
+
       const timer = setTimeout(async () => {
         try {
-          await fileHandle.remove(); 
+          await fileHandle.remove();
           toast("Deleted " + name);
         } catch (err) {
-          console.warn("Could not delete source file", err);
           toast("Loaded " + name + " — could not delete it", "warn");
         }
       }, UNDO_WINDOW_MS);
+
       toast("Loaded " + name + " — deleting in a few seconds, tap to keep it", null, () => {
         clearTimeout(timer);
         toast("Kept " + name);
       });
     }
   } catch (err) {
-    console.error(err);
     toast("Could not read file", "warn");
   }
 }
@@ -383,29 +457,35 @@ async function chooseFile() {
   if (FS_ACCESS_SUPPORTED) {
     try {
       const [handle] = await window.showOpenFilePicker({ startIn: "downloads" });
+
       let hasReadWrite = false;
+
       if (autoDeleteEl.checked) {
         try {
           const perm = await handle.requestPermission({ mode: "readwrite" });
-          hasReadWrite = (perm === "granted");
-        } catch (e) {
-          console.warn("Permission prompt failed", e);
-        }
+          hasReadWrite = perm === "granted";
+        } catch (e) {}
       }
+
       const file = await handle.getFile();
       await readFile(file, handle, hasReadWrite);
+
       return;
     } catch (err) {
       if (err && err.name === "AbortError") return;
-      console.warn("File picker unavailable or failed", err);
     }
   }
+
   fileInput.click();
 }
 
 fileInput.addEventListener("change", () => {
   const f = fileInput.files[0];
-  if (f) readFile(f);
+
+  if (f) {
+    readFile(f);
+  }
+
   fileInput.value = "";
 });
 
@@ -422,16 +502,22 @@ drop.addEventListener("keydown", (e) => {
 });
 
 let dragDepth = 0;
+
 ["dragenter", "dragover"].forEach((ev) => {
   drop.addEventListener(ev, (e) => {
     e.preventDefault();
-    if (ev === "dragenter") dragDepth++;
+
+    if (ev === "dragenter") {
+      dragDepth++;
+    }
+
     drop.classList.add("over");
   });
 });
 
 drop.addEventListener("dragleave", (e) => {
   e.preventDefault();
+
   if (--dragDepth <= 0) {
     dragDepth = 0;
     drop.classList.remove("over");
@@ -440,40 +526,57 @@ drop.addEventListener("dragleave", (e) => {
 
 drop.addEventListener("drop", async (e) => {
   e.preventDefault();
+
   dragDepth = 0;
   drop.classList.remove("over");
+
   const files = e.dataTransfer.files;
+
   const f =
     files && files.length
       ? [...files].find((x) => /\.(md|markdown|txt)$/i.test(x.name)) || files[0]
       : null;
+
   if (f) {
     let handle = null;
     let hasReadWrite = false;
+
     if (autoDeleteEl.checked && /\.(md|markdown)$/i.test(f.name)) {
-      const item = [...(e.dataTransfer.items || [])].find(
-        (it) => it.kind === "file" && it.getAsFile && it.getAsFile().name === f.name
-      );
+      const item = [...(e.dataTransfer.items || [])].find((it) => {
+        if (it.kind !== "file" || typeof it.getAsFile !== "function") {
+          return false;
+        }
+
+        const file = it.getAsFile();
+        return file && file.name === f.name;
+      });
+
       if (item && typeof item.getAsFileSystemHandle === "function") {
         try {
           const h = await item.getAsFileSystemHandle();
+
           if (h && h.kind === "file") {
             const perm = await h.requestPermission({ mode: "readwrite" });
+
             if (perm === "granted") {
               handle = h;
               hasReadWrite = true;
             }
           }
-        } catch {
-          // Degraded gracefully
-        }
+        } catch (e) {}
       }
     }
+
     readFile(f, handle, hasReadWrite);
+
     return;
   }
+
   const t = e.dataTransfer.getData("text");
-  if (t) loadText("dropped.md", t);
+
+  if (t) {
+    loadText("dropped.md", t);
+  }
 });
 
 window.addEventListener("dragover", (e) => e.preventDefault());
@@ -481,7 +584,9 @@ window.addEventListener("drop", (e) => e.preventDefault());
 
 srcText.addEventListener("paste", (e) => {
   const text = e.clipboardData && e.clipboardData.getData("text");
+
   if (!text) return;
+
   e.preventDefault();
   loadText(fileName || "clipboard.md", text);
 });
@@ -491,17 +596,19 @@ srcText.addEventListener("input", () => {
   scheduleRender();
 });
 
-// ===== Buttons =====
 $("pasteBtn").addEventListener("click", async () => {
   try {
     if (!navigator.clipboard || !navigator.clipboard.readText) throw 0;
+
     const t = await navigator.clipboard.readText();
+
     if (!t) {
       toast("Clipboard is empty", "warn");
       return;
     }
+
     loadText(fileName || "clipboard.md", t);
-  } catch {
+  } catch (e) {
     toast("Clipboard blocked — paste into the editor manually", "warn");
     srcText.focus();
   }
@@ -510,11 +617,11 @@ $("pasteBtn").addEventListener("click", async () => {
 $("clearBtn").addEventListener("click", () => {
   srcText.value = "";
   fileName = "";
+
   updateSrcStatus();
   render();
 });
 
-// ===== Templates =====
 let tpls = null;
 let saveTimer = null;
 
@@ -534,41 +641,68 @@ const nameIsFree = (name, exceptId) => {
 const nextFreeName = () => {
   const used = new Set(tpls.list.map((t) => t.name.trim().toLowerCase()));
   let i = tpls.list.length + 1;
-  while (used.has(("Template " + i).toLowerCase())) i++;
+
+  while (used.has(("Template " + i).toLowerCase())) {
+    i++;
+  }
+
   return "Template " + i;
 };
 
 function loadTpls() {
   let raw = null;
-  try { raw = localStorage.getItem(TPLS_KEY); } catch (e) {}
+
+  try {
+    raw = localStorage.getItem(TPLS_KEY);
+  } catch (e) {}
+
   if (raw) {
     try {
       const p = JSON.parse(raw);
+
       if (p && Array.isArray(p.list) && p.list.length) {
-        if (!p.list.some((t) => t.id === p.active)) p.active = p.list[0].id;
+        if (!p.list.some((t) => t.id === p.active)) {
+          p.active = p.list[0].id;
+        }
+
         return p;
       }
     } catch (e) {}
   }
+
   let old = null;
-  try { old = localStorage.getItem(TPL_KEY); } catch (e) {}
+
+  try {
+    old = localStorage.getItem(TPL_KEY);
+  } catch (e) {}
+
   const first = {
     id: newId(),
     name: "Default",
     body: old !== null && old !== "" ? old : DEFAULT_TPL,
   };
-  try { localStorage.removeItem(TPL_KEY); } catch (e) {}
-  return { active: first.id, list: [first] };
+
+  try {
+    localStorage.removeItem(TPL_KEY);
+  } catch (e) {}
+
+  return {
+    active: first.id,
+    list: [first],
+  };
 }
 
 function persistTpls() {
-  try { localStorage.setItem(TPLS_KEY, JSON.stringify(tpls)); } catch (e) {}
+  try {
+    localStorage.setItem(TPLS_KEY, JSON.stringify(tpls));
+  } catch (e) {}
 }
 
 const activeTpl = () => tpls.list.find((t) => t.id === tpls.active) || tpls.list[0];
 
 function tplSettled() {
   const t = activeTpl();
+
   if (hasToken(t.body)) {
     setDot(tplDot, "ok");
     tplStatus.textContent = t.name;
@@ -580,6 +714,7 @@ function tplSettled() {
 
 function tplTyping() {
   const body = tplText.value;
+
   if (hasToken(body)) {
     setDot(tplDot, "on");
     tplStatus.textContent = "Saving…";
@@ -591,90 +726,131 @@ function tplTyping() {
 
 function commitBody(silent) {
   clearTimeout(saveTimer);
+
   const t = activeTpl();
+
   if (t && t.body !== tplText.value) {
     t.body = tplText.value;
     persistTpls();
+
     if (!silent && !hasToken(t.body)) {
-      toast('Template saved, but ' + TOKEN + ' is missing', "warn");
+      toast("Template saved, but " + TOKEN + " is missing", "warn");
     }
   }
+
   tplSettled();
 }
 
 function renderChips() {
   chipsEl.innerHTML = "";
+
   tpls.list.forEach((t) => {
     const b = document.createElement("button");
+
     b.type = "button";
-    b.className = "chip " + (t.id === tpls.active ? "on " : " ");
+    b.className = "chip" + (t.id === tpls.active ? " on" : "");
     b.dataset.id = t.id;
     b.textContent = t.name;
     b.title = t.name;
+
     b.setAttribute("role", "tab");
     b.setAttribute("aria-selected", t.id === tpls.active ? "true" : "false");
+
     b.addEventListener("click", () => switchTpl(t.id));
+
     chipsEl.appendChild(b);
   });
 }
 
 function switchTpl(id) {
   if (id === tpls.active) return;
+
   transition(() => {
     const old = activeTpl();
+
     if (old && old.body !== tplText.value && !hasToken(tplText.value)) {
-      toast('Template saved without ' + TOKEN, "warn");
+      toast("Template saved without " + TOKEN, "warn");
     }
+
     commitBody(true);
+
     tpls.active = id;
+
     persistTpls();
+
     tplText.value = activeTpl().body;
+
     renderChips();
     tplSettled();
     scheduleRender();
+
     buzz(6);
   });
 }
 
 function newTpl() {
   commitBody(true);
+
   const name = nextFreeName();
-  const t = { id: newId(), name, body: DEFAULT_TPL };
+  const t = {
+    id: newId(),
+    name,
+    body: DEFAULT_TPL,
+  };
+
   tpls.list.push(t);
   tpls.active = t.id;
+
   persistTpls();
+
   tplText.value = t.body;
+
   renderChips();
   tplSettled();
   scheduleRender();
+
   buzz(8);
+
   startRename();
 }
 
 function startRename() {
   const t = activeTpl();
+
   if (!t) return;
+
   const chip = chipsEl.querySelector('[data-id="' + t.id + '"]');
+
   if (!chip) return;
+
   const originalName = t.name;
+
   const input = document.createElement("input");
+
   input.className = "chip-edit";
   input.value = t.name;
   input.maxLength = 28;
   input.setAttribute("aria-label", "Template name");
+
   chip.replaceWith(input);
+
   input.focus();
   input.select();
+
   let done = false;
+
   const commit = () => {
     if (done) return;
+
     done = true;
+
     const v = input.value.trim();
+
     if (!v) {
       toast("Name cannot be empty", "warn");
       t.name = originalName;
     } else if (v.toLowerCase() === originalName.toLowerCase()) {
-      // Name unchanged
+      // unchanged
     } else if (!nameIsFree(v, t.id)) {
       toast('Name "' + v + '" is already used', "warn");
       t.name = originalName;
@@ -682,16 +858,20 @@ function startRename() {
     } else {
       t.name = v;
     }
+
     persistTpls();
     renderChips();
     tplSettled();
   };
+
   input.addEventListener("blur", commit);
+
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       commit();
     }
+
     if (e.key === "Escape") {
       done = true;
       renderChips();
@@ -707,6 +887,7 @@ $("delTplBtn").addEventListener("click", () => {
     toast("Cannot delete the last template", "warn");
     return;
   }
+
   delNameEl.textContent = activeTpl().name;
   delDialog.showModal();
 });
@@ -715,54 +896,76 @@ $("cancelDel").addEventListener("click", () => delDialog.close());
 
 $("confirmDel").addEventListener("click", () => {
   delDialog.close();
+
   commitBody(true);
+
   const idx = tpls.list.findIndex((t) => t.id === tpls.active);
   const gone = tpls.list[idx].name;
+
   tpls.list.splice(idx, 1);
   tpls.active = tpls.list[Math.max(0, idx - 1)].id;
+
   persistTpls();
+
   tplText.value = activeTpl().body;
+
   renderChips();
   tplSettled();
   scheduleRender();
+
   buzz(10);
+
   toast('Deleted "' + gone + '"');
 });
 
 $("resetTplBtn").addEventListener("click", () => {
   tplText.value = DEFAULT_TPL;
+
   commitBody(true);
   scheduleRender();
+
   toast("Body reset to " + TOKEN);
+
   tplText.focus();
 });
 
-// ===== FIXED EXPORT LOGIC =====
 $("exportTplBtn").addEventListener("click", () => {
   commitBody(true);
-  const t = activeTpl(); // Get ONLY the currently active template
+
+  const t = activeTpl();
   const missing = !hasToken(t.body);
-  
+
   const data = JSON.stringify(
     {
       app: "md-assembler",
       version: 1,
       exported: new Date().toISOString(),
-      list: [{ name: t.name, body: t.body }], // Export ONLY this one template
+      list: [
+        {
+          name: t.name,
+          body: t.body,
+        },
+      ],
     },
     null,
     2
   );
-  
-  // Generate a clean filename based on the template name (supports Cyrillic & Latin)
-  const safeName = t.name.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\-_]/g, "_").substring(0, 40) || "template";
+
+  const safeName =
+    (t.name || "")
+      .trim()
+      .replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_")
+      .replace(/\s+/g, " ")
+      .slice(0, 80) || "template";
+
   downloadBlob(data, "application/json", `Template-${safeName}.json`);
-  
+
   buzz(12);
+
   if (missing) {
-    toast('Exported · template "' + t.name + '" is missing ' + TOKEN, "warn");
+    toast(`Exported · template "${t.name}" is missing ${TOKEN}`, "warn");
   } else {
-    toast('Template "' + t.name + '" exported');
+    toast(`Template "${t.name}" exported`);
   }
 });
 
@@ -770,42 +973,65 @@ $("importTplBtn").addEventListener("click", () => tplFileInput.click());
 
 tplFileInput.addEventListener("change", async () => {
   const f = tplFileInput.files[0];
+
   tplFileInput.value = "";
+
   if (!f) return;
+
   let raw;
+
   try {
     raw = await f.text();
   } catch (e) {
     toast("Could not read file", "warn");
     return;
   }
+
   try {
     const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
     const p = JSON.parse(fixed);
+
     const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
+
     if (!items) throw new Error("bad shape");
+
     let added = 0;
     let skipped = 0;
+
     items.forEach((it) => {
       if (!it || typeof it.body !== "string") {
         skipped++;
         return;
       }
-      const name = typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
+
+      const name =
+        typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
+
       if (tpls.list.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
         skipped++;
         return;
       }
-      tpls.list.push({ id: newId(), name, body: it.body });
+
+      tpls.list.push({
+        id: newId(),
+        name,
+        body: it.body,
+      });
+
       added++;
     });
+
     if (added) {
       persistTpls();
-      renderChips(); 
+      renderChips();
       buzz(10);
+
       toast(
-        "Imported " + added + " template" + (added > 1 ? "s" : " ") +
-        (skipped ? " · " + skipped + " skipped" : " ")
+        "Imported " +
+          added +
+          " template" +
+          (added > 1 ? "s" : "") +
+          (skipped ? " · " + skipped + " skipped" : "")
       );
     } else {
       toast(skipped ? "Nothing new to import" : "No valid templates found", "warn");
@@ -817,31 +1043,42 @@ tplFileInput.addEventListener("change", async () => {
 
 tplText.addEventListener("input", () => {
   tplTyping();
+
   clearTimeout(saveTimer);
+
   saveTimer = setTimeout(() => commitBody(false), 450);
+
   scheduleRender();
 });
 
 addEventListener("pagehide", () => commitBody(true));
+
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") commitBody(true);
+  if (document.visibilityState === "hidden") {
+    commitBody(true);
+  }
 });
 
 tpls = loadTpls();
+
 persistTpls();
+
 tplText.value = activeTpl().body;
+
 renderChips();
 tplSettled();
 
-// ===== Output actions =====
 copyBtn.addEventListener("click", async () => {
   if (!outText.value) {
     toast("Nothing to copy yet", "warn");
     return;
   }
+
   await copyOutput();
+
   copyBtn.classList.add("done");
   copyBtn.querySelector("span").textContent = "Copied";
+
   setTimeout(() => {
     copyBtn.classList.remove("done");
     copyBtn.querySelector("span").textContent = "Copy";
@@ -853,24 +1090,31 @@ sendBtn.addEventListener("click", async () => {
     toast("Nothing to share yet", "warn");
     return;
   }
+
   if (typeof navigator.share !== "function") {
     toast("Share not supported in this browser", "warn");
     return;
   }
+
   if (!window.isSecureContext) {
     toast("Share requires HTTPS — use Copy instead", "warn");
     return;
   }
+
   try {
     if (navigator.canShare && !navigator.canShare({ text: outText.value })) {
       toast("Cannot share this content", "warn");
       return;
     }
+
     await navigator.share({ text: outText.value });
+
     buzz(12);
   } catch (e) {
     if (e && e.name === "AbortError") return;
+
     toast("Share failed — copied to clipboard instead", "warn");
+
     await copyOutput();
     barFlash();
   }
@@ -881,24 +1125,35 @@ dlBtn.addEventListener("click", () => {
     toast("Nothing to download yet", "warn");
     return;
   }
-  const base = (fileName || "assembled").replace(/.[^.]*$/, "") || "assembled";
+
+  const base = (fileName || "assembled").replace(/\.[^.]*$/, "") || "assembled";
+
   downloadBlob(outText.value, "text/plain;charset=utf-8", base + ".txt");
+
   buzz(12);
+
   toast("Downloading " + base + ".txt");
 });
 
 barCopy.addEventListener("click", async () => {
   if (!outText.value) return;
-  if (await copyOutput()) barFlash();
+
+  if (await copyOutput()) {
+    barFlash();
+  }
 });
 
 autoCopyEl.addEventListener("change", async () => {
   try {
     localStorage.setItem(AC_KEY, autoCopyEl.checked ? "1" : "0");
   } catch (e) {}
+
   buzz(8);
+
   if (autoCopyEl.checked && outText.value) {
-    if (await copyOutput()) barFlash();
+    if (await copyOutput()) {
+      barFlash();
+    }
   }
 });
 
@@ -906,23 +1161,28 @@ autoDeleteEl.addEventListener("change", () => {
   try {
     localStorage.setItem(AD_KEY, autoDeleteEl.checked ? "1" : "0");
   } catch (e) {}
+
   buzz(8);
 });
 
-// ===== Launch Queue / Share Target =====
 try {
-  if ("launchQueue" in window && "LaunchParams" in window && "files" in LaunchParams.prototype) {
+  if (
+    "launchQueue" in window &&
+    "LaunchParams" in window &&
+    "files" in LaunchParams.prototype
+  ) {
     launchQueue.setConsumer(async (params) => {
       if (!params.files || !params.files.length) return;
+
       try {
         const file = await params.files[0].getFile();
         loadText(file.name, await file.text());
-      } catch {
+      } catch (e) {
         toast("Could not open that file", "warn");
       }
     });
   }
-} catch {}
+} catch (e) {}
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", (event) => {
@@ -933,49 +1193,60 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-// ===== Incoming shared data =====
 (function incoming() {
   try {
     const q = new URLSearchParams(location.search);
     const t = q.get("text");
+
     if (t) {
       history.replaceState(null, "", location.pathname);
+
       autoLoaded = true;
+
       loadText(q.get("title") || "shared.md", t);
+
       return;
     }
-  } catch {}
+  } catch (e) {}
+
   if ("caches" in window) {
     caches
       .open("mda-share")
       .then(async (cache) => {
         const response = await cache.match(SHARE_CACHE_URL);
+
         if (!response) return;
+
         await cache.delete(SHARE_CACHE_URL);
+
         try {
           const data = await response.json();
+
           if (data && data.text) {
             autoLoaded = true;
             loadText(data.name || "shared.md", data.text);
           }
-        } catch {}
+        } catch (e) {}
       })
       .catch(() => {});
   }
 })();
 
-// ===== PWA install =====
 let deferredPrompt = null;
 const installBtn = $("installBtn");
+
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
+
   deferredPrompt = e;
   installBtn.hidden = false;
 });
 
 installBtn.addEventListener("click", async () => {
   if (!deferredPrompt) return;
+
   await deferredPrompt.prompt();
+
   deferredPrompt = null;
   installBtn.hidden = true;
 });
@@ -986,29 +1257,42 @@ window.addEventListener("appinstalled", () => {
 });
 
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-  }, { once: true });
+  addEventListener(
+    "load",
+    () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    },
+    { once: true }
+  );
+
   let refreshing = false;
+
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
+
     refreshing = true;
+
     window.location.reload();
   });
 }
 
-// ===== Init =====
 try {
   autoCopyEl.checked = localStorage.getItem(AC_KEY) === "1";
 } catch (e) {}
+
 try {
   if (FS_ACCESS_SUPPORTED) {
     autoDeleteEl.checked = localStorage.getItem(AD_KEY) !== "0";
   } else {
     autoDeleteEl.checked = false;
     autoDeleteEl.disabled = true;
+
     const lbl = autoDeleteEl.closest(".toggle");
-    if (lbl) lbl.title = "Not available in this browser — needs a Chromium-based browser (Chrome, Edge, Brave, etc.)";
+
+    if (lbl) {
+      lbl.title =
+        "Not available in this browser — needs a Chromium-based browser (Chrome, Edge, Brave, etc.)";
+    }
   }
 } catch (e) {}
 
