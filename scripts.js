@@ -10,6 +10,7 @@ const AD_KEY = "mda.autodelete.v1";
 const FS_ACCESS_SUPPORTED = typeof window.showOpenFilePicker === "function";
 const UNDO_WINDOW_MS = 6000;
 const SHARE_CACHE_URL = new URL("./__shared", location.href).href;
+
 const fileInput = $("fileInput");
 const drop = $("drop");
 const srcText = $("srcText");
@@ -43,6 +44,7 @@ const themeTrigger = $("themeTrigger");
 const themeMenu = $("themeMenu");
 const triggerSwatch = $("triggerSwatch");
 const triggerLabel = $("triggerLabel");
+
 let fileName = "";
 let toastTimer;
 let barBusy = false;
@@ -113,9 +115,7 @@ function applyTheme(id, persist) {
     updateTrigger(id);
     if (persist) saveTheme(id);
     requestAnimationFrame(() => {
-      const bg = getComputedStyle(document.documentElement)
-        .getPropertyValue("--bg")
-        .trim();
+      const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
       const meta = document.querySelector('meta[name="theme-color"]:not([media])');
       if (meta && bg) meta.content = bg;
     });
@@ -177,8 +177,8 @@ const fmtBytes = (b) =>
   b < 1024
     ? b + " B"
     : b < 1048576
-      ? (b / 1024).toFixed(1) + " KB"
-      : (b / 1048576).toFixed(2) + " MB";
+    ? (b / 1024).toFixed(1) + " KB"
+    : (b / 1048576).toFixed(2) + " MB";
 
 const stats = (t) => ({
   bytes: new Blob([t]).size,
@@ -293,11 +293,9 @@ function render() {
   outText.value = out;
   const s = stats(out);
   outCountEl.textContent = out.length.toLocaleString() + " chars · " + s.lines + " lines";
-  const baseName = (fileName || "assembled").replace(/\.[^.]*$/, "") || "assembled";
+  const baseName = (fileName || "assembled").replace(/.[^.]*$/, "") || "assembled";
   outFileEl.textContent = baseName + ".txt";
-  outStatus.textContent =
-    "Assembled " +
-    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  outStatus.textContent = "Assembled " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   setDot(outDot, "ok");
   setGlobal("Output ready", "ok");
   updateBar();
@@ -338,8 +336,7 @@ function updateSrcStatus() {
   }
   const s = stats(t);
   setDot(srcDot, "on");
-  srcStatus.textContent =
-    (fileName || "edited") + " · " + fmtBytes(s.bytes) + " · " + s.lines + " lines";
+  srcStatus.textContent = (fileName || "edited") + " · " + fmtBytes(s.bytes) + " · " + s.lines + " lines";
 }
 
 function scheduleSrcStatus() {
@@ -356,22 +353,14 @@ async function readFile(f, fileHandle = null, hasReadWrite = false) {
   try {
     const text = await f.text();
     loadText(f.name, text);
-
     if (autoDeleteEl.checked && fileHandle && /\.(md|markdown)$/i.test(f.name)) {
       const name = f.name;
-      
-      // If we didn't get readwrite permission during the picker/drop gesture,
-      // we cannot delete the file.
       if (!hasReadWrite) {
         toast("Loaded " + name + " — read-only access, can't auto-delete", "warn");
         return;
       }
-
       const timer = setTimeout(async () => {
         try {
-          // We ALREADY have readwrite permission granted from the picker/drop gesture!
-          // We don't call requestPermission here because we are inside a timer 
-          // (no user gesture), which would throw "User activation is required".
           await fileHandle.remove(); 
           toast("Deleted " + name);
         } catch (err) {
@@ -379,7 +368,6 @@ async function readFile(f, fileHandle = null, hasReadWrite = false) {
           toast("Loaded " + name + " — could not delete it", "warn");
         }
       }, UNDO_WINDOW_MS);
-
       toast("Loaded " + name + " — deleting in a few seconds, tap to keep it", null, () => {
         clearTimeout(timer);
         toast("Kept " + name);
@@ -395,12 +383,6 @@ async function chooseFile() {
   if (FS_ACCESS_SUPPORTED) {
     try {
       const [handle] = await window.showOpenFilePicker({ startIn: "downloads" });
-      
-      // IMPORTANT: showOpenFilePicker() does NOT accept a 'mode' parameter.
-      // It only grants 'read' access by default. To get delete rights, we MUST 
-      // call requestPermission() for 'readwrite' mode.
-      // The browser explicitly preserves "transient user activation" immediately 
-      // after the picker resolves so we can request more permissions right now.
       let hasReadWrite = false;
       if (autoDeleteEl.checked) {
         try {
@@ -410,7 +392,6 @@ async function chooseFile() {
           console.warn("Permission prompt failed", e);
         }
       }
-      
       const file = await handle.getFile();
       await readFile(file, handle, hasReadWrite);
       return;
@@ -424,7 +405,7 @@ async function chooseFile() {
 
 fileInput.addEventListener("change", () => {
   const f = fileInput.files[0];
-  if (f) readFile(f); // <input type=file> cannot delete files, so hasReadWrite is false
+  if (f) readFile(f);
   fileInput.value = "";
 });
 
@@ -441,7 +422,6 @@ drop.addEventListener("keydown", (e) => {
 });
 
 let dragDepth = 0;
-
 ["dragenter", "dragover"].forEach((ev) => {
   drop.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -467,7 +447,6 @@ drop.addEventListener("drop", async (e) => {
     files && files.length
       ? [...files].find((x) => /\.(md|markdown|txt)$/i.test(x.name)) || files[0]
       : null;
-
   if (f) {
     let handle = null;
     let hasReadWrite = false;
@@ -479,7 +458,6 @@ drop.addEventListener("drop", async (e) => {
         try {
           const h = await item.getAsFileSystemHandle();
           if (h && h.kind === "file") {
-            // The drop event itself is a user gesture, so we can request permission NOW!
             const perm = await h.requestPermission({ mode: "readwrite" });
             if (perm === "granted") {
               handle = h;
@@ -539,6 +517,7 @@ $("clearBtn").addEventListener("click", () => {
 // ===== Templates =====
 let tpls = null;
 let saveTimer = null;
+
 const newId = () =>
   "t" +
   (crypto.randomUUID
@@ -628,7 +607,7 @@ function renderChips() {
   tpls.list.forEach((t) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "chip " + (t.id === tpls.active ? "on " : "");
+    b.className = "chip " + (t.id === tpls.active ? "on " : " ");
     b.dataset.id = t.id;
     b.textContent = t.name;
     b.title = t.name;
@@ -722,6 +701,7 @@ function startRename() {
 
 $("newTplBtn").addEventListener("click", newTpl);
 $("renameTplBtn").addEventListener("click", startRename);
+
 $("delTplBtn").addEventListener("click", () => {
   if (tpls.list.length < 2) {
     toast("Cannot delete the last template", "warn");
@@ -757,26 +737,32 @@ $("resetTplBtn").addEventListener("click", () => {
   tplText.focus();
 });
 
+// ===== FIXED EXPORT LOGIC =====
 $("exportTplBtn").addEventListener("click", () => {
   commitBody(true);
-  const missing = tpls.list.filter((t) => !hasToken(t.body));
+  const t = activeTpl(); // Get ONLY the currently active template
+  const missing = !hasToken(t.body);
+  
   const data = JSON.stringify(
     {
       app: "md-assembler",
       version: 1,
       exported: new Date().toISOString(),
-      list: tpls.list.map((t) => ({ name: t.name, body: t.body })),
+      list: [{ name: t.name, body: t.body }], // Export ONLY this one template
     },
     null,
     2
   );
-  downloadBlob(data, "application/json", "md-assembler-templates.json");
+  
+  // Generate a clean filename based on the template name (supports Cyrillic & Latin)
+  const safeName = t.name.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\-_]/g, "_").substring(0, 40) || "template";
+  downloadBlob(data, "application/json", `Template-${safeName}.json`);
+  
   buzz(12);
-  if (missing.length) {
-    const names = missing.map((t) => '"' + t.name + '"').join(", ");
-    toast("Exported · " + missing.length + " template(s) missing " + TOKEN + ": " + names, "warn");
+  if (missing) {
+    toast('Exported · template "' + t.name + '" is missing ' + TOKEN, "warn");
   } else {
-    toast("Templates exported");
+    toast('Template "' + t.name + '" exported');
   }
 });
 
@@ -805,8 +791,7 @@ tplFileInput.addEventListener("change", async () => {
         skipped++;
         return;
       }
-      const name =
-        typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
+      const name = typeof it.name === "string" && it.name.trim() ? it.name.trim() : "Imported";
       if (tpls.list.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
         skipped++;
         return;
@@ -816,11 +801,11 @@ tplFileInput.addEventListener("change", async () => {
     });
     if (added) {
       persistTpls();
-      renderChips();
+      renderChips(); 
       buzz(10);
       toast(
-        "Imported " + added + " template" + (added > 1 ? "s" : "") +
-        (skipped ? " · " + skipped + " skipped" : "")
+        "Imported " + added + " template" + (added > 1 ? "s" : " ") +
+        (skipped ? " · " + skipped + " skipped" : " ")
       );
     } else {
       toast(skipped ? "Nothing new to import" : "No valid templates found", "warn");
@@ -838,7 +823,6 @@ tplText.addEventListener("input", () => {
 });
 
 addEventListener("pagehide", () => commitBody(true));
-
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") commitBody(true);
 });
@@ -897,7 +881,7 @@ dlBtn.addEventListener("click", () => {
     toast("Nothing to download yet", "warn");
     return;
   }
-  const base = (fileName || "assembled").replace(/\.[^.]*$/, "") || "assembled";
+  const base = (fileName || "assembled").replace(/.[^.]*$/, "") || "assembled";
   downloadBlob(outText.value, "text/plain;charset=utf-8", base + ".txt");
   buzz(12);
   toast("Downloading " + base + ".txt");
@@ -983,7 +967,6 @@ if ("serviceWorker" in navigator) {
 // ===== PWA install =====
 let deferredPrompt = null;
 const installBtn = $("installBtn");
-
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -1018,7 +1001,6 @@ if ("serviceWorker" in navigator) {
 try {
   autoCopyEl.checked = localStorage.getItem(AC_KEY) === "1";
 } catch (e) {}
-
 try {
   if (FS_ACCESS_SUPPORTED) {
     autoDeleteEl.checked = localStorage.getItem(AD_KEY) !== "0";
