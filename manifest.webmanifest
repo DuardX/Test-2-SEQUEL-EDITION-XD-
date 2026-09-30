@@ -44,26 +44,33 @@
     "action": "./share-target",
     "method": "POST",
     "enctype": "multipart/form-data",
-    "params": [
-      { "name": "title" },
-      { "name": "text" },
-      {
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": {
         "name": "file",
-        "accept": {
-          "text/markdown": [".md", ".markdown"],
-          "text/plain": [".txt"]
-        }
+        "accept": [
+          "text/markdown",
+          ".md",
+          ".markdown",
+          "text/plain",
+          ".txt"
+        ]
       }
-    ]
+    }
   },
   "file_handlers": [
     {
       "action": "./",
       "accept": {
-        "text/markdown": [".md", ".markdown"],
-        "text/plain": [".txt"]
-      },
-      "launch_type": "focus-existing"
+        "text/markdown": [
+          ".md",
+          ".markdown"
+        ],
+        "text/plain": [
+          ".txt"
+        ]
+      }
     }
   ],
   "launch_handler": {
