@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Markdown Assembler</title>
   <meta name="description" content="MarkDownload → .md → Assemble → ready TXT. Local-only Markdown assembler.">
   <meta name="theme-color" content="#121110">
 
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'sha256-taD+uIdGKhPsa9saq7gFxaovjqV2b5K4LWqZR1uHzPk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self';">
+        content="default-src 'self'; script-src 'self' 'sha256-MfhOsQfhN6sPEvLaW51pygJEQ1rz/bKAnY812qdXya0='; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self';">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='%23efe9e0' stroke-width='3'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='%23c1442c'/%3E%3C/svg%3E">
   <link rel="manifest" href="manifest.webmanifest">
@@ -17,14 +17,16 @@
   <script>
     /* apply saved theme before paint */
     (function () {
-      var KEY = 'mda.theme.v1', t = null;
-      try { t = localStorage.getItem(KEY); } catch (e) {}
-      if (!t) {
-        var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + KEY.replace(/\./g, '\\.') + '=([^;]*)'));
-        if (m) t = decodeURIComponent(m[1]);
-      }
-      if (t) { document.documentElement.dataset.theme = t; }
-    })();
+      var KEY = 'mda.theme.v1', FONT_KEY = 'mda.font.v1', t = null, f = null;
+      try { t = localStorage.getItem(KEY); f = localStorage.getItem(FONT_KEY); } catch (e) {}
+      var readCookie = function (key) {
+        var m = document.cookie.match(new RegExp('(?:^|;\s*)' + key.replace(/\./g, '\\.') + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : null;
+      };
+      if (!t) t = readCookie(KEY);
+      if (!f) f = readCookie(FONT_KEY);
+      if (t) document.documentElement.dataset.theme = t;
+      if (f) document.documentElement.dataset.font = f;    })();
   </script>
 </head>
 <body>
@@ -94,41 +96,55 @@
 
     <div class="head-right">
       <div class="theme-dd" id="themeDD">
-        <button class="btn sm theme-trigger" id="themeTrigger" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="swatch" id="triggerSwatch" style="--sw-bg:#121110;--sw-acc:#c1442c"></span>
+        <button class="btn sm theme-trigger" id="themeTrigger" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu">
+          <span class="swatch swatch--ember" id="triggerSwatch"></span>
           <span id="triggerLabel">Ember</span>
           <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev"/></svg>
         </button>
         <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="Color theme">
           <div class="theme-menu-title">Theme</div>
           <button class="theme-option" role="radio" type="button" data-set-theme="ember" data-theme-name="Ember">
-            <span class="swatch" style="--sw-bg:#121110;--sw-acc:#c1442c;--sw-bd:#423d37"></span>
+            <span class="swatch swatch--ember"></span>
             <span class="to-name">Ember</span>
           </button>
           <button class="theme-option" role="radio" type="button" data-set-theme="paper" data-theme-name="Paper">
-            <span class="swatch" style="--sw-bg:#eee3cb;--sw-acc:#2b43e6;--sw-bd:#c2b088"></span>
+            <span class="swatch swatch--paper"></span>
             <span class="to-name">Paper</span>
           </button>
           <button class="theme-option" role="radio" type="button" data-set-theme="moss" data-theme-name="Moss">
-            <span class="swatch" style="--sw-bg:#101512;--sw-acc:#97a878;--sw-bd:#3a4436"></span>
+            <span class="swatch swatch--moss"></span>
             <span class="to-name">Moss</span>
           </button>
           <button class="theme-option" role="radio" type="button" data-set-theme="light" data-theme-name="Light">
-            <span class="swatch" style="--sw-bg:#f4f6f8;--sw-acc:#0e7490;--sw-bd:#c9cdd5"></span>
+            <span class="swatch swatch--light"></span>
             <span class="to-name">Light</span>
           </button>
           <button class="theme-option" role="radio" type="button" data-set-theme="night" data-theme-name="Night">
-            <span class="swatch" style="--sw-bg:#0e1218;--sw-acc:#7aa2ff;--sw-bd:#374254"></span>
+            <span class="swatch swatch--night"></span>
             <span class="to-name">Night</span>
           </button>
           <button class="theme-option" role="radio" type="button" data-set-theme="dusk" data-theme-name="Dusk">
-            <span class="swatch" style="--sw-bg:#161119;--sw-acc:#cf85a3;--sw-bd:#46384b"></span>
+            <span class="swatch swatch--dusk"></span>
             <span class="to-name">Dusk</span>
           </button>
           <button class="theme-option" role="radio" type="button" data-set-theme="noir" data-theme-name="Noir">
-            <span class="swatch" style="--sw-bg:#0a0a0a;--sw-acc:#e5e5e5;--sw-bd:#3d3d3d"></span>
+            <span class="swatch swatch--noir"></span>
             <span class="to-name">Noir</span>
           </button>
+        </div>
+      </div>
+      <div class="font-dd" id="fontDD">
+        <button class="btn sm font-trigger" id="fontTrigger" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="fontMenu">
+          <span class="font-aa" aria-hidden="true">Aa</span>
+          <span id="fontTriggerLabel">Space Grotesk</span>
+          <svg class="icon icon--chev" aria-hidden="true"><use href="#i-chev"/></svg>
+        </button>
+        <div class="theme-menu font-menu" id="fontMenu" role="radiogroup" aria-label="Editor font">
+          <div class="theme-menu-title">Font</div>
+          <button class="theme-option font-option" role="radio" type="button" data-set-font="space" data-font-name="Space Grotesk"><span class="font-sample">Aa</span><span class="to-name">Space Grotesk</span></button>
+          <button class="theme-option font-option" role="radio" type="button" data-set-font="system" data-font-name="System UI"><span class="font-sample">Aa</span><span class="to-name">System UI</span></button>
+          <button class="theme-option font-option" role="radio" type="button" data-set-font="mono" data-font-name="Monospace"><span class="font-sample">Aa</span><span class="to-name">Monospace</span></button>
+          <button class="theme-option font-option" role="radio" type="button" data-set-font="serif" data-font-name="Serif"><span class="font-sample">Aa</span><span class="to-name">Serif</span></button>
         </div>
       </div>
       <span class="pill"><i class="dot" id="globalDot"></i><span id="globalState">Idle</span></span>
@@ -149,8 +165,8 @@
       </label>
 
       <div class="row">
-        <button class="btn sm" id="pasteBtn"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg><span>Paste Markdown</span></button>
-        <button class="btn sm" id="clearBtn"><svg class="icon" aria-hidden="true"><use href="#i-clear"/></svg><span>Clear</span></button>
+        <button type="button" class="btn sm" id="pasteBtn"><svg class="icon" aria-hidden="true"><use href="#i-paste"/></svg><span>Paste Markdown</span></button>
+        <button type="button" class="btn sm" id="clearBtn"><svg class="icon" aria-hidden="true"><use href="#i-clear"/></svg><span>Clear</span></button>
         <label class="toggle" title="Delete the source file after it loads (Chromium browsers only)">
           <input type="checkbox" id="autoDelete" role="switch" checked>
           <span class="track" aria-hidden="true"></span>
@@ -158,7 +174,7 @@
         </label>
       </div>
 
-      <textarea id="srcText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Markdown source" placeholder="Loaded Markdown appears here — edit it and the output updates live."></textarea>
+      <textarea id="srcText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Markdown source" aria-describedby="srcStatus" placeholder="Loaded Markdown appears here — edit it and the output updates live."></textarea>
     </section>
 
     <section class="step" id="step-tpl" aria-labelledby="h-tpl">
@@ -173,14 +189,14 @@
       </div>
 
       <p class="hint">Put <code>{{MARKDOWN}}</code> wherever the downloaded Markdown belongs. Templates save automatically.</p>
-      <textarea id="tplText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Template"></textarea>
+      <textarea id="tplText" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Template" aria-describedby="tplStatus"></textarea>
 
       <div class="row">
-        <button class="btn sm" id="renameTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-rename"/></svg><span>Rename</span></button>
-        <button class="btn sm" id="delTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-delete"/></svg><span>Delete</span></button>
-        <button class="btn sm" id="resetTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>Reset</span></button>
-        <button class="btn sm" id="exportTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg><span>Export</span></button>
-        <button class="btn sm" id="importTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-import"/></svg><span>Import</span></button>
+        <button type="button" class="btn sm" id="renameTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-rename"/></svg><span>Rename</span></button>
+        <button type="button" class="btn sm" id="delTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-delete"/></svg><span>Delete</span></button>
+        <button type="button" class="btn sm" id="resetTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>Reset</span></button>
+        <button type="button" class="btn sm" id="exportTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg><span>Export</span></button>
+        <button type="button" class="btn sm" id="importTplBtn"><svg class="icon" aria-hidden="true"><use href="#i-import"/></svg><span>Import</span></button>
       </div>
     </section>
 
@@ -190,10 +206,10 @@
         <span class="step-status"><i class="dot" id="outDot"></i><span id="outStatus">Waiting for source</span></span>
       </div>
 
-      <div class="row" style="margin-top:0">
-        <button class="btn" id="copyBtn"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
-        <button class="btn" id="sendBtn"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Share</span></button>
-        <button class="btn primary" id="dlBtn"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download</span></button>
+      <div class="row row--flush">
+        <button type="button" class="btn" id="copyBtn"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
+        <button type="button" class="btn" id="sendBtn"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Share</span></button>
+        <button type="button" class="btn primary" id="dlBtn"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download</span></button>
         <label class="toggle" title="Copy the result automatically after each assembly">
           <input type="checkbox" id="autoCopy" role="switch">
           <span class="track" aria-hidden="true"></span>
@@ -201,7 +217,7 @@
         </label>
       </div>
 
-      <textarea id="outText" readonly spellcheck="false" aria-label="Assembled output" aria-live="polite" placeholder="Assembled result appears here automatically once a source is provided."></textarea>
+      <textarea id="outText" readonly spellcheck="false" aria-label="Assembled output" aria-describedby="outStatus outCount" placeholder="Assembled result appears here automatically once a source is provided."></textarea>
       <div class="meta"><span id="outCount">0 chars &middot; 0 lines</span><span id="outFile">&mdash;</span></div>
     </section>
   </main>
@@ -221,10 +237,10 @@
     </button>
   </div>
 
-  <dialog id="delDialog">
-    <p>Delete template "<span id="delName"></span>"?</p>
+  <dialog id="delDialog" aria-labelledby="delDialogTitle">
+    <p id="delDialogTitle">Delete template "<span id="delName"></span>"?</p>
     <div class="dialog-actions">
-      <button class="btn sm" id="cancelDel">Cancel</button>
+      <button type="button" class="btn sm" id="cancelDel">Cancel</button>
       <button class="btn sm danger" id="confirmDel">Delete</button>
     </div>
   </dialog>
