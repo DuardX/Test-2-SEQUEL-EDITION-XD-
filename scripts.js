@@ -1,15 +1,18 @@
 const $ = (id) => document.getElementById(id);
 const TOKEN = "{{MARKDOWN}}";
 const TOKEN_RE = /{{\s*MARKDOWN\s*}}/i;
+const TOKEN_RE_GLOBAL = /{{\s*MARKDOWN\s*}}/gi;
 const TPL_KEY = "mda.template.v1";
 const TPLS_KEY = "mda.templates.v1";
 const DEFAULT_TPL = TOKEN;
 const THEME_KEY = "mda.theme.v1";
+const FONT_KEY = "mda.font.v1";
 const AC_KEY = "mda.autocopy.v1";
 const AD_KEY = "mda.autodelete.v1";
 const FS_ACCESS_SUPPORTED = typeof window.showOpenFilePicker === "function";
 const UNDO_WINDOW_MS = 6000;
 const SHARE_CACHE_URL = new URL("./__shared", location.href).href;
+const consumedShareIds = new Set();
 
 const fileInput = $("fileInput");
 const drop = $("drop");
@@ -44,13 +47,17 @@ const themeTrigger = $("themeTrigger");
 const themeMenu = $("themeMenu");
 const triggerSwatch = $("triggerSwatch");
 const triggerLabel = $("triggerLabel");
+const fontDD = $("fontDD");
+const fontTrigger = $("fontTrigger");
+const fontMenu = $("fontMenu");
+const fontTriggerLabel = $("fontTriggerLabel");
 
 let fileName = "";
 let toastTimer;
 let barBusy = false;
 let autoCopyTimer = null;
 let renderPending = false;
-let srcStatusPending = false;
+let sourceUpdatePending = false;
 let autoLoaded = false;
 
 const transition = (fn) => {
@@ -62,6 +69,7 @@ const transition = (fn) => {
 };
 
 const themeBtns = [...document.querySelectorAll("[data-set-theme]")];
+const fontBtns = [...document.querySelectorAll("[data-set-font]")];
 
 function saveTheme(id) {
   try {
@@ -79,6 +87,72 @@ function saveTheme(id) {
   } else {
     writeCookie();
   }
+}
+
+function saveFont(id) {
+  try {
+    localStorage.setItem(FONT_KEY, id);
+  } catch (e) {}
+
+  const writeCookie = () => {
+    try {
+      document.cookie = `${FONT_KEY}=${encodeURIComponent(id)};max-age=31536000;path=/;SameSite=Lax`;
+    } catch (e) {}
+  };
+
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(writeCookie, { timeout: 1000 });
+  } else {
+    writeCookie();
+  }
+}
+
+function loadFont() {
+  let f = null;
+
+  try {
+    f = localStorage.getItem(FONT_KEY);
+  } catch (e) {}
+
+  if (!f) {
+    const m = document.cookie.match(
+      new RegExp("(?:^|;\\s*)" + FONT_KEY.replace(/\\./g, "\\\\.") + "=([^;]*)")
+    );
+    if (m) f = decodeURIComponent(m[1]);
+    if (f) {
+      try {
+        localStorage.setItem(FONT_KEY, f);
+      } catch (e) {}
+    }
+  }
+
+  return f;
+}
+
+function setFontMenu(open) {
+  fontMenu.classList.toggle("open", open);
+  fontTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) {
+    const active = fontMenu.querySelector('[role="radio"][aria-checked="true"]');
+    active?.focus();
+  }
+}
+
+function updateFontTrigger(id) {
+  const active = fontBtns.find((b) => b.dataset.setFont === id);
+  if (active) fontTriggerLabel.textContent = active.dataset.fontName || active.textContent.trim();
+}
+
+function applyFont(id, persist) {
+  if (!fontBtns.some((b) => b.dataset.setFont === id)) return;
+  document.documentElement.dataset.font = id;
+  fontBtns.forEach((b) => {
+    const selected = b.dataset.setFont === id;
+    b.setAttribute("aria-checked", selected ? "true" : "false");
+    b.tabIndex = selected ? 0 : -1;
+  });
+  updateFontTrigger(id);
+  if (persist) saveFont(id);
 }
 
 function loadTheme() {
@@ -110,14 +184,18 @@ function loadTheme() {
 function setThemeMenu(open) {
   themeMenu.classList.toggle("open", open);
   themeTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+
+  if (open) {
+    const active = themeMenu.querySelector('[role="radio"][aria-checked="true"]');
+    active?.focus();
+  }
 }
 
 function updateTrigger(id) {
   const active = themeBtns.find((b) => b.dataset.setTheme === id);
   if (!active) return;
 
-  triggerSwatch.style.setProperty("--sw-bg", active.style.getPropertyValue("--sw-bg"));
-  triggerSwatch.style.setProperty("--sw-acc", active.style.getPropertyValue("--sw-acc"));
+  triggerSwatch.className = "swatch swatch--" + id;
   triggerLabel.textContent = active.dataset.themeName || active.textContent.trim();
 }
 
@@ -126,7 +204,9 @@ function applyTheme(id, persist) {
     document.documentElement.dataset.theme = id;
 
     themeBtns.forEach((b) => {
-      b.setAttribute("aria-checked", b.dataset.setTheme === id ? "true" : "false");
+      const selected = b.dataset.setTheme === id;
+      b.setAttribute("aria-checked", selected ? "true" : "false");
+      b.tabIndex = selected ? 0 : -1;
     });
 
     updateTrigger(id);
@@ -147,6 +227,7 @@ function applyTheme(id, persist) {
 }
 
 themeTrigger.addEventListener("click", () => {
+  if (fontMenu.classList.contains("open")) setFontMenu(false);
   setThemeMenu(!themeMenu.classList.contains("open"));
 });
 
@@ -160,6 +241,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && themeMenu.classList.contains("open")) {
     setThemeMenu(false);
     themeTrigger.focus();
+  } else if (e.key === "Escape" && fontMenu.classList.contains("open")) {
+    setFontMenu(false);
+    fontTrigger.focus();
   }
 });
 
@@ -169,22 +253,22 @@ themeMenu.addEventListener("keydown", (e) => {
   const buttons = [...themeMenu.querySelectorAll('[role="radio"]')];
   const currentIndex = buttons.findIndex((b) => b === document.activeElement);
 
-  if (currentIndex === -1) return;
+  if (currentIndex === -1 || !buttons.length) return;
 
   e.preventDefault();
 
-  if (e.key === "Home") {
-    buttons[0].focus();
-    return;
+  let nextIndex = currentIndex;
+
+  if (e.key === "Home") nextIndex = 0;
+  else if (e.key === "End") nextIndex = buttons.length - 1;
+  else {
+    const delta = e.key === "ArrowDown" ? 1 : -1;
+    nextIndex = (currentIndex + delta + buttons.length) % buttons.length;
   }
 
-  if (e.key === "End") {
-    buttons[buttons.length - 1].focus();
-    return;
-  }
-
-  const delta = e.key === "ArrowDown" ? 1 : -1;
-  buttons[(currentIndex + delta + buttons.length) % buttons.length].focus();
+  const next = buttons[nextIndex];
+  next.focus();
+  applyTheme(next.dataset.setTheme, true);
 });
 
 themeBtns.forEach((b) => {
@@ -193,6 +277,48 @@ themeBtns.forEach((b) => {
     setThemeMenu(false);
   });
 });
+
+fontTrigger.addEventListener("click", () => {
+  setFontMenu(!fontMenu.classList.contains("open"));
+  if (themeMenu.classList.contains("open")) setThemeMenu(false);
+});
+
+fontBtns.forEach((b) => {
+  b.addEventListener("click", () => {
+    applyFont(b.dataset.setFont, true);
+    setFontMenu(false);
+  });
+});
+
+fontMenu.addEventListener("keydown", (e) => {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+  const buttons = [...fontMenu.querySelectorAll('[role="radio"]')];
+  const currentIndex = buttons.findIndex((b) => b === document.activeElement);
+  if (currentIndex === -1 || !buttons.length) return;
+  e.preventDefault();
+  let nextIndex = currentIndex;
+  if (e.key === "Home") nextIndex = 0;
+  else if (e.key === "End") nextIndex = buttons.length - 1;
+  else {
+    const delta = e.key === "ArrowDown" ? 1 : -1;
+    nextIndex = (currentIndex + delta + buttons.length) % buttons.length;
+  }
+  const next = buttons[nextIndex];
+  next.focus();
+  applyFont(next.dataset.setFont, true);
+});
+
+document.addEventListener("click", (e) => {
+  if (fontMenu.classList.contains("open") && !fontDD.contains(e.target)) setFontMenu(false);
+});
+
+const savedFont = loadFont();
+applyFont(
+  savedFont && fontBtns.some((b) => b.dataset.setFont === savedFont)
+    ? savedFont
+    : "space",
+  false
+);
 
 const savedTheme = loadTheme();
 
@@ -212,7 +338,7 @@ const fmtBytes = (b) =>
 
 const stats = (t) => ({
   bytes: new Blob([t]).size,
-  lines: t ? t.split("\n").length : 0,
+  lines: t ? 1 + (t.match(/\n/g)?.length || 0) : 0,
 });
 
 function toast(msg, tone, onTap) {
@@ -269,21 +395,26 @@ async function copyOutput() {
   if (!outText.value) return false;
 
   try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
     await navigator.clipboard.writeText(outText.value);
-  } catch (e) {
+    buzz(12);
+    return true;
+  } catch (_) {
     outText.focus();
     outText.select();
 
+    let copied = false;
+
     try {
-      document.execCommand("copy");
-    } catch (err) {}
+      copied = document.execCommand("copy");
+    } catch (__) {}
 
     const sel = getSelection();
     if (sel) sel.removeAllRanges();
-  }
 
-  buzz(12);
-  return true;
+    if (copied) buzz(12);
+    return copied;
+  }
 }
 
 function updateBar() {
@@ -340,8 +471,8 @@ function render() {
     return;
   }
 
-  const out = tpl.includes(TOKEN)
-    ? tpl.split(TOKEN).join(src)
+  const out = TOKEN_RE.test(tpl)
+    ? tpl.replace(TOKEN_RE_GLOBAL, src)
     : (tpl.trim() ? tpl + "\n\n" : "") + src;
 
   outText.value = out;
@@ -410,14 +541,15 @@ function updateSrcStatus() {
     (fileName || "edited") + " · " + fmtBytes(s.bytes) + " · " + s.lines + " lines";
 }
 
-function scheduleSrcStatus() {
-  if (srcStatusPending) return;
+function scheduleSourceUpdate() {
+  if (sourceUpdatePending) return;
 
-  srcStatusPending = true;
+  sourceUpdatePending = true;
 
   requestAnimationFrame(() => {
-    srcStatusPending = false;
+    sourceUpdatePending = false;
     updateSrcStatus();
+    render();
   });
 }
 
@@ -591,10 +723,7 @@ srcText.addEventListener("paste", (e) => {
   loadText(fileName || "clipboard.md", text);
 });
 
-srcText.addEventListener("input", () => {
-  scheduleSrcStatus();
-  scheduleRender();
-});
+srcText.addEventListener("input", scheduleSourceUpdate);
 
 $("pasteBtn").addEventListener("click", async () => {
   try {
@@ -988,8 +1117,14 @@ tplFileInput.addEventListener("change", async () => {
   }
 
   try {
-    const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
-    const p = JSON.parse(fixed);
+    let p;
+
+    try {
+      p = JSON.parse(raw);
+    } catch (_) {
+      const fixed = raw.replace(/"\s*([^"\s]+?)\s*"\s*:/g, '"$1":');
+      p = JSON.parse(fixed);
+    }
 
     const items = p && Array.isArray(p.list) ? p.list : Array.isArray(p) ? p : null;
 
@@ -1074,15 +1209,17 @@ copyBtn.addEventListener("click", async () => {
     return;
   }
 
-  await copyOutput();
+  if (await copyOutput()) {
+    copyBtn.classList.add("done");
+    copyBtn.querySelector("span").textContent = "Copied";
 
-  copyBtn.classList.add("done");
-  copyBtn.querySelector("span").textContent = "Copied";
-
-  setTimeout(() => {
-    copyBtn.classList.remove("done");
-    copyBtn.querySelector("span").textContent = "Copy";
-  }, 1500);
+    setTimeout(() => {
+      copyBtn.classList.remove("done");
+      copyBtn.querySelector("span").textContent = "Copy";
+    }, 1500);
+  } else {
+    toast("Could not copy the result", "warn");
+  }
 });
 
 sendBtn.addEventListener("click", async () => {
@@ -1113,10 +1250,12 @@ sendBtn.addEventListener("click", async () => {
   } catch (e) {
     if (e && e.name === "AbortError") return;
 
-    toast("Share failed — copied to clipboard instead", "warn");
-
-    await copyOutput();
-    barFlash();
+    if (await copyOutput()) {
+      toast("Share failed — copied to clipboard instead", "warn");
+      barFlash();
+    } else {
+      toast("Share failed and clipboard copy was unavailable", "warn");
+    }
   }
 });
 
@@ -1187,6 +1326,15 @@ try {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data && event.data.type === "md-share") {
+      const id = typeof event.data.id === "string" ? event.data.id : "";
+      if (id && consumedShareIds.has(id)) return;
+      if (id) consumedShareIds.add(id);
+
+      caches
+        .open("mda-share")
+        .then((cache) => cache.delete(SHARE_CACHE_URL))
+        .catch(() => {});
+
       autoLoaded = true;
       loadText(event.data.name, event.data.text);
     }
@@ -1221,8 +1369,13 @@ if ("serviceWorker" in navigator) {
 
         try {
           const data = await response.json();
+          const id = typeof data?.id === "string" ? data.id : "";
+          if (id && consumedShareIds.has(id)) return;
+          if (id) consumedShareIds.add(id);
+          const createdAt = Number(data?.createdAt) || 0;
+          const fresh = createdAt > 0 && Date.now() - createdAt <= 10 * 60 * 1000;
 
-          if (data && data.text) {
+          if (fresh && typeof data.text === "string" && data.text) {
             autoLoaded = true;
             loadText(data.name || "shared.md", data.text);
           }
@@ -1256,23 +1409,36 @@ window.addEventListener("appinstalled", () => {
   setGlobal("Installed", "ok");
 });
 
+const updateConnectionState = () => {
+  if (navigator.onLine) {
+    setGlobal("Online", "ok");
+  } else {
+    setGlobal("Offline", "warn");
+  }
+};
+
+addEventListener("online", updateConnectionState);
+addEventListener("offline", updateConnectionState);
+updateConnectionState();
+
 if ("serviceWorker" in navigator) {
   addEventListener(
     "load",
     () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
     },
     { once: true }
   );
 
-  let refreshing = false;
+  let hadServiceWorkerController = !!navigator.serviceWorker.controller;
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (refreshing) return;
+    if (!hadServiceWorkerController) {
+      hadServiceWorkerController = true;
+      return;
+    }
 
-    refreshing = true;
-
-    window.location.reload();
+    setGlobal("Updated", "ok");
   });
 }
 
