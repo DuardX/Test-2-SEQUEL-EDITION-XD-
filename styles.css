@@ -3,35 +3,35 @@
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 300;
-  src: url('fonts/SpaceGrotesk-Light.ttf') format('truetype');
+  src: url('fonts/SpaceGrotesk-Light.woff2') format('woff2');
   font-display: swap;
 }
 @font-face {
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 400;
-  src: url('fonts/SpaceGrotesk-Regular.ttf') format('truetype');
+  src: url('fonts/SpaceGrotesk-Regular.woff2') format('woff2');
   font-display: swap;
 }
 @font-face {
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 500;
-  src: url('fonts/SpaceGrotesk-Medium.ttf') format('truetype');
+  src: url('fonts/SpaceGrotesk-Medium.woff2') format('woff2');
   font-display: swap;
 }
 @font-face {
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 600;
-  src: url('fonts/SpaceGrotesk-Semibold.ttf') format('truetype');
+  src: url('fonts/SpaceGrotesk-SemiBold.woff2') format('woff2');
   font-display: swap;
 }
 @font-face {
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 700;
-  src: url('fonts/SpaceGrotesk-Bold.ttf') format('truetype');
+  src: url('fonts/SpaceGrotesk-Bold.woff2') format('woff2');
   font-display: swap;
 }
 @layer reset, theme, base, layout, components, overrides;
@@ -48,7 +48,8 @@
     --accent:#c1442c;
     --ok:#97a878; --warn:#cf9a4e; --on-accent:#fbf6ef;
     --disp:"Space Grotesk", system-ui, sans-serif;
-    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --editor-font:var(--disp);
+    --mono:var(--disp);
     --r:9px;
     --accent-hover: color-mix(in srgb, var(--accent) 82%, white);
     --accent-soft:  color-mix(in srgb, var(--accent) 14%, transparent);
@@ -87,6 +88,23 @@
     --bg:#161119; --panel:#1e1721; --ink:#ece4ec; --muted:#9d8ea0; --faint:#6c5e70;
     --line:#2d2432; --line2:#46384b; --accent:#cf85a3;
     --ok:#8fb58a; --warn:#cfa063; --on-accent:#20111a;
+  }
+
+
+  [data-font="system"] {
+    --disp:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono:var(--disp);
+    --editor-font:var(--disp);
+  }
+  [data-font="mono"] {
+    --disp:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    --mono:var(--disp);
+    --editor-font:var(--disp);
+  }
+  [data-font="serif"] {
+    --disp:ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --mono:var(--disp);
+    --editor-font:var(--disp);
   }
 
   [data-theme="noir"] {
@@ -197,8 +215,16 @@
     background:linear-gradient(135deg, var(--sw-bg) 48%, var(--sw-acc) 52%);
     border:1px solid var(--sw-bd, var(--line2));
   }
+  .swatch--ember { --sw-bg:#121110; --sw-acc:#c1442c; --sw-bd:#423d37; }
+  .swatch--paper { --sw-bg:#eee3cb; --sw-acc:#2b43e6; --sw-bd:#c2b088; }
+  .swatch--moss  { --sw-bg:#101512; --sw-acc:#97a878; --sw-bd:#3a4436; }
+  .swatch--light { --sw-bg:#f4f6f8; --sw-acc:#0e7490; --sw-bd:#c9cdd5; }
+  .swatch--night { --sw-bg:#0e1218; --sw-acc:#7aa2ff; --sw-bd:#374254; }
+  .swatch--dusk  { --sw-bg:#161119; --sw-acc:#cf85a3; --sw-bd:#46384b; }
+  .swatch--noir  { --sw-bg:#0a0a0a; --sw-acc:#e5e5e5; --sw-bd:#3d3d3d; }
 
-  .theme-dd { position:relative; }
+.theme-dd, .font-dd { position:relative; }
+  .font-aa { font:600 12px/1 var(--disp); }
   .theme-trigger {
     & .swatch { width:14px; height:14px; }
   }
@@ -236,6 +262,7 @@
     &:hover { background:var(--accent-soft); }
     &[aria-checked="true"] { background:var(--accent-soft); border-color:var(--accent); }
     & .to-name { flex:1; text-align:left; }
+    & .font-sample { width:24px; text-align:center; font-size:16px; font-family:var(--editor-font); }
   }
 
   .step {
@@ -311,6 +338,7 @@
   }
 
   .row { display:flex; flex-wrap:wrap; gap:9px; margin-top:12px; align-items:center; min-width:0; }
+  .row--flush { margin-top:0; }
 
   .btn {
     display:inline-flex; align-items:center; gap:7px;
