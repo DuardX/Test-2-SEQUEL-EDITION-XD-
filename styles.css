@@ -38,6 +38,7 @@
 
 @layer reset {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
 }
 
 @layer theme {
@@ -489,6 +490,10 @@
   body:has(.actionbar.show) #toast { bottom:calc(88px + env(safe-area-inset-bottom)); }
 
   ::view-transition-group(root) { animation-duration:.2s; }
+
+  @media (display-mode: standalone), (display-mode: minimal-ui), (display-mode: window-controls-overlay) {
+    #installBtn { display: none !important; }
+  }
 
   @media (max-width:920px) {
     main { grid-template-columns:minmax(0,1fr); }
