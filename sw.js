@@ -1,8 +1,9 @@
-const SHELL_VERSION = "v11";
+const SHELL_VERSION = "v13";
 const SHELL_CACHE = `mda-shell-${SHELL_VERSION}`;
 const SHARE_CACHE = "mda-share";
 const SHARE_CACHE_KEY = new URL("./__shared", self.registration.scope).href;
 const SHELL_ROOT_URL = new URL("./", self.registration.scope).href;
+const SHELL_INDEX_URL = new URL("./index.html", self.registration.scope).href;
 
 const SHELL_URLS = [
   "./",
@@ -59,7 +60,9 @@ async function networkFirstNavigation(event) {
     }
     return response;
   } catch (_) {
-    const cached = await caches.match(SHELL_ROOT_URL);
+    const cached =
+      (await caches.match(SHELL_ROOT_URL)) ||
+      (await caches.match(SHELL_INDEX_URL));
     return cached || Response.error();
   }
 }
@@ -109,12 +112,15 @@ self.addEventListener("fetch", (event) => {
       try {
         const form = await event.request.formData();
         const file = form.get("file");
-        const text =
-          file && typeof file.text === "function"
-            ? await file.text()
-            : form.get("text") || "";
-        const name = file && file.name ? file.name : form.get("title") || "shared.md";
-        const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const hasFile = file && file.size > 0 && typeof file.text === "function";
+        const text = hasFile
+          ? await file.text()
+          : form.get("text") || form.get("url") || "";
+        const name =
+          hasFile && file.name ? file.name : form.get("title") || "shared.md";
+        const id = crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
         const cache = await caches.open(SHARE_CACHE);
         await cache.put(
