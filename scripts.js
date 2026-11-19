@@ -59,6 +59,8 @@ let autoCopyTimer = null;
 let renderPending = false;
 let sourceUpdatePending = false;
 let autoLoaded = false;
+let transientGlobal = null;
+let transientGlobalTimer = null;
 
 const transition = (fn) => {
   if (document.startViewTransition) {
@@ -70,6 +72,13 @@ const transition = (fn) => {
 
 const themeBtns = [...document.querySelectorAll("[data-set-theme]")];
 const fontBtns = [...document.querySelectorAll("[data-set-font]")];
+
+function readCookie(key) {
+  const m = document.cookie.match(
+    new RegExp("(?:^|;\\s*)" + key.replace(/\./g, "\\.") + "=([^;]*)")
+  );
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 function saveTheme(id) {
   try {
@@ -115,10 +124,7 @@ function loadFont() {
   } catch (e) {}
 
   if (!f) {
-    const m = document.cookie.match(
-      new RegExp("(?:^|;\\s*)" + FONT_KEY.replace(/\\./g, "\\\\.") + "=([^;]*)")
-    );
-    if (m) f = decodeURIComponent(m[1]);
+    f = readCookie(FONT_KEY);
     if (f) {
       try {
         localStorage.setItem(FONT_KEY, f);
@@ -145,14 +151,16 @@ function updateFontTrigger(id) {
 
 function applyFont(id, persist) {
   if (!fontBtns.some((b) => b.dataset.setFont === id)) return;
-  document.documentElement.dataset.font = id;
-  fontBtns.forEach((b) => {
-    const selected = b.dataset.setFont === id;
-    b.setAttribute("aria-checked", selected ? "true" : "false");
-    b.tabIndex = selected ? 0 : -1;
+  transition(() => {
+    document.documentElement.dataset.font = id;
+    fontBtns.forEach((b) => {
+      const selected = b.dataset.setFont === id;
+      b.setAttribute("aria-checked", selected ? "true" : "false");
+      b.tabIndex = selected ? 0 : -1;
+    });
+    updateFontTrigger(id);
+    if (persist) saveFont(id);
   });
-  updateFontTrigger(id);
-  if (persist) saveFont(id);
 }
 
 function loadTheme() {
@@ -163,14 +171,7 @@ function loadTheme() {
   } catch (e) {}
 
   if (!t) {
-    const m = document.cookie.match(
-      new RegExp("(?:^|;\\s*)" + THEME_KEY.replace(/\./g, "\\.") + "=([^;]*)")
-    );
-
-    if (m) {
-      t = decodeURIComponent(m[1]);
-    }
-
+    t = readCookie(THEME_KEY);
     if (t) {
       try {
         localStorage.setItem(THEME_KEY, t);
@@ -371,6 +372,33 @@ const setGlobal = (s, c) => {
   setDot(globalDot, c);
 };
 
+function syncGlobalState() {
+  if (transientGlobal) {
+    setGlobal(transientGlobal.label, transientGlobal.tone);
+    return;
+  }
+
+  const hasOutput = !!outText.value;
+
+  if (!navigator.onLine) {
+    setGlobal(hasOutput ? "Offline · Ready" : "Offline", "warn");
+  } else if (hasOutput) {
+    setGlobal("Output ready", "ok");
+  } else {
+    setGlobal("Idle", "");
+  }
+}
+
+function flashGlobal(label, tone, ms = 3000) {
+  transientGlobal = { label, tone };
+  syncGlobalState();
+  clearTimeout(transientGlobalTimer);
+  transientGlobalTimer = setTimeout(() => {
+    transientGlobal = null;
+    syncGlobalState();
+  }, ms);
+}
+
 function downloadBlob(data, mime, filename) {
   const url = URL.createObjectURL(new Blob([data], { type: mime }));
   const a = document.createElement("a");
@@ -463,7 +491,7 @@ function render() {
     outStatus.textContent = "Waiting for source";
 
     setDot(outDot, "");
-    setGlobal("Idle", "");
+    syncGlobalState();
 
     clearTimeout(autoCopyTimer);
     updateBar();
@@ -489,7 +517,7 @@ function render() {
     new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   setDot(outDot, "ok");
-  setGlobal("Output ready", "ok");
+  syncGlobalState();
   updateBar();
 
   if (autoCopyEl.checked) {
@@ -588,7 +616,18 @@ async function readFile(f, fileHandle = null, hasReadWrite = false) {
 async function chooseFile() {
   if (FS_ACCESS_SUPPORTED) {
     try {
-      const [handle] = await window.showOpenFilePicker({ startIn: "downloads" });
+      const [handle] = await window.showOpenFilePicker({
+        startIn: "downloads",
+        types: [
+          {
+            description: "Markdown & Text files",
+            accept: {
+              "text/markdown": [".md", ".markdown"],
+              "text/plain": [".txt"],
+            },
+          },
+        ],
+      });
 
       let hasReadWrite = false;
 
@@ -716,11 +755,16 @@ window.addEventListener("drop", (e) => e.preventDefault());
 
 srcText.addEventListener("paste", (e) => {
   const text = e.clipboardData && e.clipboardData.getData("text");
-
   if (!text) return;
 
-  e.preventDefault();
-  loadText(fileName || "clipboard.md", text);
+  const isEmpty = !srcText.value.trim();
+  const isAllSelected =
+    srcText.selectionStart === 0 && srcText.selectionEnd === srcText.value.length;
+
+  if (isEmpty || isAllSelected) {
+    e.preventDefault();
+    loadText(fileName || "clipboard.md", text);
+  }
 });
 
 srcText.addEventListener("input", scheduleSourceUpdate);
@@ -968,10 +1012,8 @@ function startRename() {
 
   let done = false;
 
-  const commit = () => {
+  const commit = (fromBlur = false) => {
     if (done) return;
-
-    done = true;
 
     const v = input.value.trim();
 
@@ -982,23 +1024,31 @@ function startRename() {
       // unchanged
     } else if (!nameIsFree(v, t.id)) {
       toast('Name "' + v + '" is already used', "warn");
+      if (!fromBlur) {
+        input.classList.add("invalid");
+        return;
+      }
       t.name = originalName;
-      input.classList.add("invalid");
     } else {
       t.name = v;
     }
 
+    done = true;
     persistTpls();
     renderChips();
     tplSettled();
   };
 
-  input.addEventListener("blur", commit);
+  input.addEventListener("input", () => {
+    input.classList.remove("invalid");
+  });
+
+  input.addEventListener("blur", () => commit(true));
 
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      commit();
+      commit(false);
     }
 
     if (e.key === "Escape") {
@@ -1326,6 +1376,8 @@ try {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data && event.data.type === "md-share") {
+      if (typeof event.data.text !== "string" || !event.data.text) return;
+
       const id = typeof event.data.id === "string" ? event.data.id : "";
       if (id && consumedShareIds.has(id)) return;
       if (id) consumedShareIds.add(id);
@@ -1344,7 +1396,7 @@ if ("serviceWorker" in navigator) {
 (function incoming() {
   try {
     const q = new URLSearchParams(location.search);
-    const t = q.get("text");
+    const t = q.get("text") || q.get("url");
 
     if (t) {
       history.replaceState(null, "", location.pathname);
@@ -1406,20 +1458,12 @@ installBtn.addEventListener("click", async () => {
 
 window.addEventListener("appinstalled", () => {
   installBtn.hidden = true;
-  setGlobal("Installed", "ok");
+  flashGlobal("Installed", "ok");
 });
 
-const updateConnectionState = () => {
-  if (navigator.onLine) {
-    setGlobal("Online", "ok");
-  } else {
-    setGlobal("Offline", "warn");
-  }
-};
-
-addEventListener("online", updateConnectionState);
-addEventListener("offline", updateConnectionState);
-updateConnectionState();
+addEventListener("online", syncGlobalState);
+addEventListener("offline", syncGlobalState);
+syncGlobalState();
 
 if ("serviceWorker" in navigator) {
   addEventListener(
@@ -1438,7 +1482,7 @@ if ("serviceWorker" in navigator) {
       return;
     }
 
-    setGlobal("Updated", "ok");
+    flashGlobal("Updated", "ok");
   });
 }
 
