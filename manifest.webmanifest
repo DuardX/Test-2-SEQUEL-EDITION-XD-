@@ -47,16 +47,19 @@
     "params": {
       "title": "title",
       "text": "text",
-      "files": {
-        "name": "file",
-        "accept": [
-          "text/markdown",
-          ".md",
-          ".markdown",
-          "text/plain",
-          ".txt"
-        ]
-      }
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": [
+            "text/markdown",
+            ".md",
+            ".markdown",
+            "text/plain",
+            ".txt"
+          ]
+        }
+      ]
     }
   },
   "file_handlers": [
