@@ -223,7 +223,7 @@
   .swatch--dusk  { --sw-bg:#161119; --sw-acc:#cf85a3; --sw-bd:#46384b; }
   .swatch--noir  { --sw-bg:#0a0a0a; --sw-acc:#e5e5e5; --sw-bd:#3d3d3d; }
 
-.theme-dd, .font-dd { position:relative; }
+  .theme-dd, .font-dd { position:relative; }
   .font-aa { font:600 12px/1 var(--disp); }
   .theme-trigger {
     & .swatch { width:14px; height:14px; }
@@ -234,7 +234,6 @@
     position:absolute;
     top:calc(100% + 8px);
     right:0;
-    left:0;
     z-index:60;
     padding:6px;
     min-width:176px;
