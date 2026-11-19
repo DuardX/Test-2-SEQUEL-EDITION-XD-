@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#121110">
 
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'sha256-MfhOsQfhN6sPEvLaW51pygJEQ1rz/bKAnY812qdXya0='; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self';">
+        content="default-src 'self'; script-src 'self' 'sha256-J9ILM+y8irabnNiyYeQMfxEmRAJIyktaL1ylS7UTi/U='; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self';">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='%23efe9e0' stroke-width='3'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='%23c1442c'/%3E%3C/svg%3E">
   <link rel="manifest" href="manifest.webmanifest">
@@ -20,13 +20,14 @@
       var KEY = 'mda.theme.v1', FONT_KEY = 'mda.font.v1', t = null, f = null;
       try { t = localStorage.getItem(KEY); f = localStorage.getItem(FONT_KEY); } catch (e) {}
       var readCookie = function (key) {
-        var m = document.cookie.match(new RegExp('(?:^|;\s*)' + key.replace(/\./g, '\\.') + '=([^;]*)'));
+        var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + key.replace(/\./g, '\\.') + '=([^;]*)'));
         return m ? decodeURIComponent(m[1]) : null;
       };
       if (!t) t = readCookie(KEY);
       if (!f) f = readCookie(FONT_KEY);
       if (t) document.documentElement.dataset.theme = t;
-      if (f) document.documentElement.dataset.font = f;    })();
+      if (f) document.documentElement.dataset.font = f;
+    })();
   </script>
 </head>
 <body>
@@ -241,7 +242,7 @@
     <p id="delDialogTitle">Delete template "<span id="delName"></span>"?</p>
     <div class="dialog-actions">
       <button type="button" class="btn sm" id="cancelDel">Cancel</button>
-      <button class="btn sm danger" id="confirmDel">Delete</button>
+      <button type="button" class="btn sm danger" id="confirmDel">Delete</button>
     </div>
   </dialog>
 
