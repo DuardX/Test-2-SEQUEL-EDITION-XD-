@@ -9,6 +9,7 @@ const THEME_KEY = "mda.theme.v1";
 const FONT_KEY = "mda.font.v1";
 const AC_KEY = "mda.autocopy.v1";
 const AD_KEY = "mda.autodelete.v1";
+const INSTALLED_KEY = "mda.installed.v1";
 const FS_ACCESS_SUPPORTED = typeof window.showOpenFilePicker === "function";
 const UNDO_WINDOW_MS = 6000;
 const SHARE_CACHE_URL = new URL("./__shared", location.href).href;
@@ -1438,10 +1439,67 @@ if ("serviceWorker" in navigator) {
 })();
 
 let deferredPrompt = null;
+let appAlreadyInstalled = false;
 const installBtn = $("installBtn");
+
+const isStandalone = () =>
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.matchMedia("(display-mode: minimal-ui)").matches ||
+  window.matchMedia("(display-mode: window-controls-overlay)").matches ||
+  window.navigator.standalone === true;
+
+function setInstalledState(installed) {
+  appAlreadyInstalled = installed;
+  try {
+    if (installed) {
+      localStorage.setItem(INSTALLED_KEY, "1");
+    } else {
+      localStorage.removeItem(INSTALLED_KEY);
+    }
+  } catch (e) {}
+
+  if (installed) {
+    deferredPrompt = null;
+    installBtn.hidden = true;
+  }
+}
+
+try {
+  if (isStandalone() || localStorage.getItem(INSTALLED_KEY) === "1") {
+    setInstalledState(true);
+  }
+} catch (e) {
+  if (isStandalone()) {
+    setInstalledState(true);
+  }
+}
+
+window.matchMedia("(display-mode: standalone)").addEventListener("change", (e) => {
+  if (e.matches) {
+    setInstalledState(true);
+  }
+});
+
+if (typeof navigator.getInstalledRelatedApps === "function") {
+  navigator
+    .getInstalledRelatedApps()
+    .then((apps) => {
+      if (Array.isArray(apps) && apps.length > 0) {
+        setInstalledState(true);
+      } else if (!isStandalone()) {
+        setInstalledState(false);
+      }
+    })
+    .catch(() => {});
+}
 
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
+
+  if (appAlreadyInstalled || isStandalone()) {
+    installBtn.hidden = true;
+    return;
+  }
 
   deferredPrompt = e;
   installBtn.hidden = false;
@@ -1451,13 +1509,19 @@ installBtn.addEventListener("click", async () => {
   if (!deferredPrompt) return;
 
   await deferredPrompt.prompt();
+  try {
+    const choice = await deferredPrompt.userChoice;
+    if (choice && choice.outcome === "accepted") {
+      setInstalledState(true);
+    }
+  } catch (e) {}
 
   deferredPrompt = null;
   installBtn.hidden = true;
 });
 
 window.addEventListener("appinstalled", () => {
-  installBtn.hidden = true;
+  setInstalledState(true);
   flashGlobal("Installed", "ok");
 });
 
