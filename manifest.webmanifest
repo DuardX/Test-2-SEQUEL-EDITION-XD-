@@ -40,6 +40,12 @@
       "purpose": "maskable"
     }
   ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "./manifest.webmanifest"
+    }
+  ],
   "share_target": {
     "action": "./share-target",
     "method": "POST",
