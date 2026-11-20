@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#121215"/>
+
+  <!-- Minimalist Artwork -->
+  <g transform="translate(256, 256) scale(0.76) translate(-256, -256)">
+    <!-- Left Curly Brace -->
+    <path d="M 140 132 C 118 132, 112 144, 112 164 L 112 228 C 112 244, 102 256, 86 256 C 102 256, 112 268, 112 284 L 112 348 C 112 368, 118 380, 140 380"
+          fill="none" stroke="#F4F1EA" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Right Curly Brace -->
+    <path d="M 372 132 C 394 132, 400 144, 400 164 L 400 228 C 400 244, 410 256, 426 256 C 410 256, 400 268, 400 284 L 400 348 C 400 368, 394 380, 372 380"
+          fill="none" stroke="#F4F1EA" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Central Terracotta-Coral Card -->
+    <rect x="162" y="132" width="188" height="248" rx="34" fill="#DE593B"/>
+
+    <!-- Continuous Minimalist 'M' with Integrated Downward Arrow -->
+    <path d="M 206 306 L 206 206 L 256 260 L 306 206 L 306 306"
+          fill="none" stroke="#F4F1EA" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 284 284 L 306 306 L 328 284"
+          fill="none" stroke="#F4F1EA" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
