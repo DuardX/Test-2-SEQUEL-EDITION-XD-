@@ -1,4 +1,4 @@
-const SHELL_VERSION = "v17";
+const SHELL_VERSION = "v18";
 const SHELL_CACHE = `mda-shell-${SHELL_VERSION}`;
 const SHARE_CACHE = "mda-share";
 const SHARE_CACHE_KEY = new URL("./__shared", self.registration.scope).href;
