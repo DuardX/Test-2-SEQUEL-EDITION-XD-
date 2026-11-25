@@ -1,4 +1,4 @@
-const SHELL_VERSION = "v16";
+const SHELL_VERSION = "v17";
 const SHELL_CACHE = `mda-shell-${SHELL_VERSION}`;
 const SHARE_CACHE = "mda-share";
 const SHARE_CACHE_KEY = new URL("./__shared", self.registration.scope).href;
@@ -43,7 +43,14 @@ async function cacheFirst(request) {
 }
 
 async function networkFirstNavigation(event) {
-  const preload = await event.preloadResponse;
+  let preload = null;
+
+  try {
+    preload = await event.preloadResponse;
+  } catch (_) {
+    preload = null; // offline: preload rejects, fall through to cache
+  }
+
   if (preload) {
     const cache = await caches.open(SHELL_CACHE);
     if (preload.ok && preload.type === "basic") {
