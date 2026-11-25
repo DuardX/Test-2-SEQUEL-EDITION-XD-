@@ -322,7 +322,24 @@ applyFont(
   false
 );
 
-const savedTheme = loadTheme();
+const savedThemeRaw = loadTheme();
+
+/* one-time migration: retired themes map onto their closest successor */
+const LEGACY_THEMES = {
+  paper: "newsprint",
+  moss: "crt",
+  light: "blueprint",
+  night: "synth",
+  dusk: "amber",
+};
+const savedTheme =
+  savedThemeRaw && Object.prototype.hasOwnProperty.call(LEGACY_THEMES, savedThemeRaw)
+    ? LEGACY_THEMES[savedThemeRaw]
+    : savedThemeRaw;
+
+if (savedTheme !== savedThemeRaw && savedTheme) {
+  saveTheme(savedTheme);
+}
 
 applyTheme(
   savedTheme && themeBtns.some((b) => b.dataset.setTheme === savedTheme)
