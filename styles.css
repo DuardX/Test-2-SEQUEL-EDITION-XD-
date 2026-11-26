@@ -64,6 +64,8 @@
     --ok:#3dff70; --warn:#ffd23d; --err:#ff5c5c;
     --glow:0 0 18px color-mix(in srgb, var(--accent) 30%, transparent);
     --dotgrid:rgba(61,255,112,.055);
+    --crt-stripe: color-mix(in srgb, var(--accent) 6%, transparent);
+    --crt-roll:   color-mix(in srgb, var(--accent) 6%, transparent);
   }
 
   [data-theme="amber"] {
@@ -72,8 +74,11 @@
     --line:#2b1d0a; --line2:#3f2c10;
     --accent:#ffb141; --accent-hover:#ffc871; --on-accent:#1d1200;
     --ok:#ffb141; --warn:#ffd23d; --err:#ff6a3d;
-    --glow:0 0 18px color-mix(in srgb, var(--accent) 26%, transparent);
+    --glow:0 0 20px color-mix(in srgb, var(--accent) 34%, transparent);
     --dotgrid:rgba(255,177,65,.05);
+    /* amber phosphor is dimmer than green — push its screen harder */
+    --crt-stripe: color-mix(in srgb, var(--accent) 9%, transparent);
+    --crt-roll:   color-mix(in srgb, var(--accent) 8%, transparent);
   }
 
   [data-theme="blueprint"] {
@@ -159,21 +164,22 @@
 
   /* ===== Themed background layers ===== */
 
-  /* CRT + Amber: phosphor glow + scanlines + vignette, only over the viewport */
-  [data-theme="crt"] body, [data-theme="amber"] body {
-    background:
-      radial-gradient(ellipse 120% 90% at 50% 40%,
-        transparent 55%,
-        color-mix(in srgb, var(--bg) 88%, black) 100%);
-    text-shadow:0 0 6px color-mix(in srgb, var(--accent) 34%, transparent);
+  /* CRT + Amber: phosphor bloom behind content, soft glow on type.
+     background-image only — never the shorthand, so --bg color survives. */
+  [data-theme="crt"] body {
+    background-image:
+      radial-gradient(ellipse 75% 55% at 50% 38%,
+        color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%);
+    text-shadow:0 0 7px color-mix(in srgb, var(--accent) 38%, transparent);
+  }
+  [data-theme="amber"] body {
+    background-image:
+      radial-gradient(ellipse 75% 55% at 50% 38%,
+        color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%);
+    text-shadow:0 0 8px color-mix(in srgb, var(--accent) 48%, transparent);
   }
   [data-theme="crt"] body::before, [data-theme="amber"] body::before {
-    background-image:
-      repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px),
-      radial-gradient(var(--line) 1px, transparent 1.4px);
-    background-size:auto, 23px 23px;
-    opacity:.6;
-    mix-blend-mode:normal;
+    opacity:.5;
   }
   [data-theme="crt"] body::after, [data-theme="amber"] body::after {
     height:3px;
@@ -183,6 +189,48 @@
   [data-theme="crt"] .step, [data-theme="amber"] .step,
   [data-theme="crt"] textarea, [data-theme="amber"] textarea {
     box-shadow:var(--glow);
+  }
+
+  /* CRT + Amber: the glass of the tube, painted OVER the whole viewport.
+     ::before = raster: 1px dark scanline, then a 2px faint phosphor stripe
+     (so the raster reads even on near-black panels), plus a real vignette.
+     ::after  = a slow, faint refresh band rolling down the screen. */
+  html[data-theme="crt"]::before, html[data-theme="amber"]::before {
+    content:""; position:fixed; inset:0; z-index:44; pointer-events:none;
+    background:
+      repeating-linear-gradient(0deg,
+        rgba(0,0,0,.30) 0 1px,
+        var(--crt-stripe) 1px 3px),
+      radial-gradient(ellipse 120% 105% at 50% 42%,
+        transparent 55%, rgba(0,0,0,.44) 100%);
+  }
+  html[data-theme="crt"]::after, html[data-theme="amber"]::after {
+    content:""; position:fixed; left:0; right:0; top:-32%; height:32%;
+    z-index:45; pointer-events:none;
+    background:linear-gradient(180deg, transparent,
+      var(--crt-roll) 45%, var(--crt-roll) 55%, transparent);
+    animation:crtRoll 12s linear infinite;
+    will-change:transform;
+  }
+  @keyframes crtRoll {
+    from { transform:translateY(0); }
+    to   { transform:translateY(412.5%); }
+  }
+  /* phosphor hum: tiny, irregular dips in raster brightness */
+  html[data-theme="crt"]::before, html[data-theme="amber"]::before {
+    animation:crtHum 4.7s linear infinite;
+  }
+  @keyframes crtHum {
+    0%, 100% { opacity:1; }
+    7%  { opacity:.94; }  9%  { opacity:1; }
+    42% { opacity:.97; }  44% { opacity:1; }
+    71% { opacity:.92; }  73% { opacity:1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-theme="crt"]::before, html[data-theme="amber"]::before,
+    html[data-theme="crt"]::after, html[data-theme="amber"]::after {
+      animation:none;
+    }
   }
 
   /* Blueprint: drafting-paper double grid, no dot matrix */

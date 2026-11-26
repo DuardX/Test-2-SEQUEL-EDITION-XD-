@@ -1,4 +1,4 @@
-const SHELL_VERSION = "v18";
+const SHELL_VERSION = "v19";
 const SHELL_CACHE = `mda-shell-${SHELL_VERSION}`;
 const SHARE_CACHE = "mda-share";
 const SHARE_CACHE_KEY = new URL("./__shared", self.registration.scope).href;
@@ -66,7 +66,7 @@ async function networkFirstNavigation(event) {
       await cache.put(SHELL_ROOT_URL, response.clone());
     }
     return response;
-  } catch (_) {
+  } catch {
     const cached =
       (await caches.match(SHELL_ROOT_URL)) ||
       (await caches.match(SHELL_INDEX_URL));
@@ -121,7 +121,7 @@ self.addEventListener("fetch", (event) => {
         const file = form.get("file");
         const hasFile = file && file.size > 0 && typeof file.text === "function";
         const text = hasFile
-          ? await file.text()
+          ? file.text()
           : form.get("text") || form.get("url") || "";
         const name =
           hasFile && file.name ? file.name : form.get("title") || "shared.md";
@@ -143,7 +143,7 @@ self.addEventListener("fetch", (event) => {
         });
         const target = clients.find((client) => client.focused) || clients[0];
         target?.postMessage({ type: "md-share", id, name, text });
-      } catch (_) {
+      } catch {
         // The share request still needs a valid navigation response.
       }
 
