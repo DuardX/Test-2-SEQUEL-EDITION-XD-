@@ -66,7 +66,7 @@ async function networkFirstNavigation(event) {
       await cache.put(SHELL_ROOT_URL, response.clone());
     }
     return response;
-  } catch {
+  } catch (_) {
     const cached =
       (await caches.match(SHELL_ROOT_URL)) ||
       (await caches.match(SHELL_INDEX_URL));
@@ -121,7 +121,7 @@ self.addEventListener("fetch", (event) => {
         const file = form.get("file");
         const hasFile = file && file.size > 0 && typeof file.text === "function";
         const text = hasFile
-          ? file.text()
+          ? await file.text()
           : form.get("text") || form.get("url") || "";
         const name =
           hasFile && file.name ? file.name : form.get("title") || "shared.md";
@@ -143,7 +143,7 @@ self.addEventListener("fetch", (event) => {
         });
         const target = clients.find((client) => client.focused) || clients[0];
         target?.postMessage({ type: "md-share", id, name, text });
-      } catch {
+      } catch (_) {
         // The share request still needs a valid navigation response.
       }
 
